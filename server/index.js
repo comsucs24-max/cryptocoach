@@ -269,6 +269,235 @@ function calculateIndicators(candles) {
   };
 }
 
+function detectChartPatterns(candles, timeframe) {
+  if (!candles || candles.length < 20) return [];
+
+  const closes  = candles.map(c => parseFloat(c.close));
+  const highs   = candles.map(c => parseFloat(c.high));
+  const lows    = candles.map(c => parseFloat(c.low));
+  const volumes = candles.map(c => parseFloat(c.volume));
+  const n       = closes.length;
+  const patterns = [];
+
+  function findPeaks(arr, window = 3) {
+    const peaks = [];
+    for (let i = window; i < arr.length - window; i++) {
+      const slice = arr.slice(i - window, i + window + 1);
+      if (arr[i] === Math.max(...slice)) peaks.push({ idx: i, val: arr[i] });
+    }
+    return peaks;
+  }
+
+  function findTroughs(arr, window = 3) {
+    const troughs = [];
+    for (let i = window; i < arr.length - window; i++) {
+      const slice = arr.slice(i - window, i + window + 1);
+      if (arr[i] === Math.min(...slice)) troughs.push({ idx: i, val: arr[i] });
+    }
+    return troughs;
+  }
+
+  const highPeaks    = findPeaks(highs);
+  const lowTroughs   = findTroughs(lows);
+
+  // ── Double Top ──────────────────────────────────────────
+  if (highPeaks.length >= 2) {
+    const [p1, p2] = highPeaks.slice(-2);
+    const diff = Math.abs(p1.val - p2.val) / p1.val;
+    const gap  = p2.idx - p1.idx;
+    if (diff < 0.02 && gap >= 5 && gap <= 30) {
+      const neckline = Math.min(...lows.slice(p1.idx, p2.idx));
+      const target   = p1.val - (p1.val - neckline);
+      patterns.push({
+        name: 'Double Top', type: 'REVERSAL', bias: 'BEARISH',
+        confidence: diff < 0.01 ? 'HIGH' : 'MEDIUM',
+        description: `Two peaks at $${p1.val.toFixed(0)} and $${p2.val.toFixed(0)} — ${(diff*100).toFixed(1)}% apart`,
+        neckline: neckline.toFixed(0), target: target.toFixed(0),
+        action: `Watch for break below neckline $${neckline.toFixed(0)}. Target $${target.toFixed(0)}`,
+        session: 'Session 23: Double Top & Bottom',
+      });
+    }
+  }
+
+  // ── Double Bottom ───────────────────────────────────────
+  if (lowTroughs.length >= 2) {
+    const [t1, t2] = lowTroughs.slice(-2);
+    const diff = Math.abs(t1.val - t2.val) / t1.val;
+    const gap  = t2.idx - t1.idx;
+    if (diff < 0.02 && gap >= 5 && gap <= 30) {
+      const neckline = Math.max(...highs.slice(t1.idx, t2.idx));
+      const target   = t1.val + (neckline - t1.val) * 2;
+      patterns.push({
+        name: 'Double Bottom', type: 'REVERSAL', bias: 'BULLISH',
+        confidence: diff < 0.01 ? 'HIGH' : 'MEDIUM',
+        description: `Two troughs at $${t1.val.toFixed(0)} and $${t2.val.toFixed(0)} — ${(diff*100).toFixed(1)}% apart`,
+        neckline: neckline.toFixed(0), target: target.toFixed(0),
+        action: `Watch for break above neckline $${neckline.toFixed(0)}. Target $${target.toFixed(0)}`,
+        session: 'Session 23: Double Top & Bottom',
+      });
+    }
+  }
+
+  // ── Head & Shoulders ────────────────────────────────────
+  if (highPeaks.length >= 3) {
+    const [left, head, right] = highPeaks.slice(-3);
+    const isHead         = head.val > left.val && head.val > right.val;
+    const shouldersEqual = Math.abs(left.val - right.val) / left.val < 0.03;
+    if (isHead && shouldersEqual) {
+      const neckline = Math.min(
+        Math.min(...lows.slice(left.idx, head.idx)),
+        Math.min(...lows.slice(head.idx, right.idx))
+      );
+      const target = neckline - (head.val - neckline);
+      patterns.push({
+        name: 'Head & Shoulders', type: 'REVERSAL', bias: 'BEARISH',
+        confidence: Math.abs(left.val - right.val) / left.val < 0.015 ? 'HIGH' : 'MEDIUM',
+        description: `L-shoulder $${left.val.toFixed(0)}, Head $${head.val.toFixed(0)}, R-shoulder $${right.val.toFixed(0)}`,
+        neckline: neckline.toFixed(0), target: target.toFixed(0),
+        action: `Break below neckline $${neckline.toFixed(0)} confirms. Target $${target.toFixed(0)}`,
+        session: 'Session 22: Head & Shoulders',
+      });
+    }
+  }
+
+  // ── Inverse Head & Shoulders ────────────────────────────
+  if (lowTroughs.length >= 3) {
+    const [left, head, right] = lowTroughs.slice(-3);
+    const isHead         = head.val < left.val && head.val < right.val;
+    const shouldersEqual = Math.abs(left.val - right.val) / left.val < 0.03;
+    if (isHead && shouldersEqual) {
+      const neckline = Math.max(
+        Math.max(...highs.slice(left.idx, head.idx)),
+        Math.max(...highs.slice(head.idx, right.idx))
+      );
+      const target = neckline + (neckline - head.val);
+      patterns.push({
+        name: 'Inverse Head & Shoulders', type: 'REVERSAL', bias: 'BULLISH',
+        confidence: 'MEDIUM',
+        description: `L-shoulder $${left.val.toFixed(0)}, Head $${head.val.toFixed(0)}, R-shoulder $${right.val.toFixed(0)}`,
+        neckline: neckline.toFixed(0), target: target.toFixed(0),
+        action: `Break above neckline $${neckline.toFixed(0)} confirms. Target $${target.toFixed(0)}`,
+        session: 'Session 22: Head & Shoulders',
+      });
+    }
+  }
+
+  // ── Bull / Bear Flag ────────────────────────────────────
+  const last20C = closes.slice(-20), last20H = highs.slice(-20), last20L = lows.slice(-20);
+  const poleEnd = 10;
+  const poleMove         = (last20C[poleEnd] - last20C[0]) / last20C[0];
+  const bearPoleMove     = (last20C[0] - last20C[poleEnd]) / last20C[0];
+  const consRange        = (Math.max(...last20H.slice(poleEnd)) - Math.min(...last20L.slice(poleEnd))) / last20C[poleEnd];
+  const volDecline       = volumes.slice(-5).reduce((a,b)=>a+b,0) < volumes.slice(-15,-10).reduce((a,b)=>a+b,0);
+
+  if (poleMove > 0.04 && consRange < 0.03 && volDecline) {
+    const target = closes[n-1] + (last20C[poleEnd] - last20C[0]);
+    patterns.push({
+      name: 'Bull Flag', type: 'CONTINUATION', bias: 'BULLISH',
+      confidence: consRange < 0.015 ? 'HIGH' : 'MEDIUM',
+      description: `Flagpole +${(poleMove*100).toFixed(1)}%, consolidation ${(consRange*100).toFixed(1)}%, volume declining ✓`,
+      target: target.toFixed(0),
+      action: `Buy breakout above $${Math.max(...last20H.slice(poleEnd)).toFixed(0)}. Target $${target.toFixed(0)}`,
+      session: 'Session 24: Bull & Bear Flags',
+    });
+  }
+  if (bearPoleMove > 0.04 && consRange < 0.03 && volDecline) {
+    const target = closes[n-1] - (last20C[0] - last20C[poleEnd]);
+    patterns.push({
+      name: 'Bear Flag', type: 'CONTINUATION', bias: 'BEARISH',
+      confidence: consRange < 0.015 ? 'HIGH' : 'MEDIUM',
+      description: `Flagpole -${(bearPoleMove*100).toFixed(1)}%, consolidation ${(consRange*100).toFixed(1)}%, volume declining ✓`,
+      target: target.toFixed(0),
+      action: `Short breakdown below $${Math.min(...last20L.slice(poleEnd)).toFixed(0)}. Target $${target.toFixed(0)}`,
+      session: 'Session 24: Bull & Bear Flags',
+    });
+  }
+
+  // ── Ascending / Descending Triangle ─────────────────────
+  const rH = highs.slice(-15), rL = lows.slice(-15);
+  const highVar = Math.max(...rH) - Math.min(...rH);
+  const lowVar  = Math.max(...rL) - Math.min(...rL);
+  const flatTop    = highVar / closes[n-1] < 0.015;
+  const flatBot    = lowVar  / closes[n-1] < 0.015;
+  const risingBot  = rL[rL.length-1] > rL[0];
+  const fallingTop = rH[rH.length-1] < rH[0];
+
+  if (flatTop && risingBot && lowVar > highVar * 2) {
+    const resistance = Math.max(...rH);
+    const target     = resistance + (resistance - Math.min(...rL));
+    patterns.push({
+      name: 'Ascending Triangle', type: 'CONTINUATION', bias: 'BULLISH',
+      confidence: 'MEDIUM',
+      description: `Flat resistance $${resistance.toFixed(0)}, rising lows — buyers getting more aggressive`,
+      target: target.toFixed(0),
+      action: `Buy breakout above $${resistance.toFixed(0)}. Target $${target.toFixed(0)}. Stop below last higher low.`,
+      session: 'Session 25: Triangle Patterns',
+    });
+  }
+  if (flatBot && fallingTop && highVar > lowVar * 2) {
+    const support = Math.min(...rL);
+    const target  = support - (Math.max(...rH) - support);
+    patterns.push({
+      name: 'Descending Triangle', type: 'CONTINUATION', bias: 'BEARISH',
+      confidence: 'MEDIUM',
+      description: `Flat support $${support.toFixed(0)}, falling highs — sellers getting more aggressive`,
+      target: target.toFixed(0),
+      action: `Short breakdown below $${support.toFixed(0)}. Target $${target.toFixed(0)}.`,
+      session: 'Session 25: Triangle Patterns',
+    });
+  }
+
+  // ── Candlestick Patterns (last 3 candles) ───────────────
+  if (candles.length >= 1) {
+    const c  = candles[candles.length - 1];
+    const o  = parseFloat(c.open), h = parseFloat(c.high);
+    const l  = parseFloat(c.low),  cl = parseFloat(c.close);
+    const body       = Math.abs(cl - o);
+    const upperWick  = h - Math.max(o, cl);
+    const lowerWick  = Math.min(o, cl) - l;
+    const totalRange = h - l;
+
+    if (totalRange > 0 && body / totalRange < 0.1)
+      patterns.push({ name: 'Doji', type: 'CANDLESTICK', bias: 'NEUTRAL', confidence: 'MEDIUM',
+        description: `Tiny body (${(body/totalRange*100).toFixed(0)}% of range) — indecision between buyers and sellers`,
+        action: 'Wait for next candle to confirm direction', session: 'Session 17: Doji Patterns' });
+
+    if (lowerWick > body * 2 && upperWick < body * 0.5 && cl > o)
+      patterns.push({ name: 'Hammer', type: 'CANDLESTICK', bias: 'BULLISH', confidence: 'MEDIUM',
+        description: `Long lower wick (${(lowerWick/totalRange*100).toFixed(0)}% of range) — buyers rejected lows strongly`,
+        action: 'Bullish signal at support. Confirm with next green candle.', session: 'Session 18: Hammer & Shooting Star' });
+
+    if (upperWick > body * 2 && lowerWick < body * 0.5 && cl < o)
+      patterns.push({ name: 'Shooting Star', type: 'CANDLESTICK', bias: 'BEARISH', confidence: 'MEDIUM',
+        description: `Long upper wick (${(upperWick/totalRange*100).toFixed(0)}% of range) — sellers rejected highs strongly`,
+        action: 'Bearish signal at resistance. Confirm with next red candle.', session: 'Session 18: Hammer & Shooting Star' });
+
+    if (totalRange > 0 && body / totalRange > 0.9)
+      patterns.push({ name: cl > o ? 'Bullish Marubozu' : 'Bearish Marubozu', type: 'CANDLESTICK',
+        bias: cl > o ? 'BULLISH' : 'BEARISH', confidence: 'HIGH',
+        description: `Full-body candle (${(body/totalRange*100).toFixed(0)}% of range) — pure ${cl > o ? 'buying' : 'selling'} pressure`,
+        action: `Strong ${cl > o ? 'bullish' : 'bearish'} momentum. Trend likely continues.`, session: 'Session 21: Marubozu' });
+  }
+
+  // ── Engulfing ───────────────────────────────────────────
+  if (candles.length >= 2) {
+    const prev = candles[candles.length - 2];
+    const curr = candles[candles.length - 1];
+    const pO = parseFloat(prev.open), pC = parseFloat(prev.close);
+    const cO = parseFloat(curr.open), cC = parseFloat(curr.close);
+    if (pC < pO && cC > cO && cO < pC && cC > pO)
+      patterns.push({ name: 'Bullish Engulfing', type: 'CANDLESTICK', bias: 'BULLISH', confidence: 'HIGH',
+        description: 'Current candle engulfs previous bearish candle — buyers overwhelmed sellers',
+        action: 'Strong reversal signal. Enter long on confirmation.', session: 'Session 19: Engulfing Patterns' });
+    if (pC > pO && cC < cO && cO > pC && cC < pO)
+      patterns.push({ name: 'Bearish Engulfing', type: 'CANDLESTICK', bias: 'BEARISH', confidence: 'HIGH',
+        description: 'Current candle engulfs previous bullish candle — sellers overwhelmed buyers',
+        action: 'Strong reversal signal. Enter short on confirmation.', session: 'Session 19: Engulfing Patterns' });
+  }
+
+  return patterns;
+}
+
 function formatMarketData(snap) {
   const t = snap.ticker;
   if (!t) return `\n⚠️ Live market data unavailable for ${snap.symbol}: ${snap.tickerError || 'unknown error'}\n`;
@@ -310,6 +539,20 @@ function formatMarketData(snap) {
       out += `Price vs EMA20: ${ind.priceVsEma20}\n`;
       out += `Bollinger Bands: Upper=$${ind.bollinger.upper} Mid=$${ind.bollinger.middle} Lower=$${ind.bollinger.lower} Width=${ind.bollinger.width}%\n`;
       out += `DIVERGENCE: ${ind.divergence.type} [${ind.divergence.strength}] — ${ind.divergence.desc}\n`;
+    }
+
+    const patterns = detectChartPatterns(chronological, tf);
+    if (patterns.length > 0) {
+      out += `PATTERNS DETECTED ON ${tf.toUpperCase()}:\n`;
+      patterns.forEach(p => {
+        out += `  ★ ${p.name} [${p.bias}] [${p.confidence} confidence]\n`;
+        out += `    ${p.description}\n`;
+        out += `    Action: ${p.action}\n`;
+        if (p.neckline) out += `    Neckline: $${p.neckline} | Target: $${p.target}\n`;
+        out += `    Learn more: ${p.session}\n`;
+      });
+    } else {
+      out += `PATTERNS ON ${tf.toUpperCase()}: No clear patterns detected\n`;
     }
 
     out += `Recent candles (oldest→newest):\n`;
