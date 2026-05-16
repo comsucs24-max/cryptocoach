@@ -146,6 +146,118 @@ async function fetchSnapshot(symbol, mode = 'swing') {
   };
 }
 
+function calculateIndicators(candles) {
+  if (!candles || candles.length < 20) return null;
+
+  const closes  = candles.map(c => parseFloat(c.close));
+  const highs   = candles.map(c => parseFloat(c.high));
+  const lows    = candles.map(c => parseFloat(c.low));
+  const volumes = candles.map(c => parseFloat(c.volume));
+
+  function calcEMA(arr, period) {
+    const k = 2 / (period + 1);
+    let ema = arr[0];
+    const emas = [ema];
+    for (let i = 1; i < arr.length; i++) {
+      ema = arr[i] * k + ema * (1 - k);
+      emas.push(parseFloat(ema.toFixed(2)));
+    }
+    return emas;
+  }
+
+  function calcRSI(arr, period = 14) {
+    if (arr.length < period + 1) return null;
+    let gains = 0, losses = 0;
+    for (let i = 1; i <= period; i++) {
+      const d = arr[i] - arr[i - 1];
+      if (d >= 0) gains += d; else losses -= d;
+    }
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+    const rsiValues = [];
+    for (let i = period + 1; i < arr.length; i++) {
+      const d = arr[i] - arr[i - 1];
+      avgGain = (avgGain * (period - 1) + (d > 0 ? d : 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + (d < 0 ? -d : 0)) / period;
+      const rs  = avgLoss === 0 ? 100 : avgGain / avgLoss;
+      rsiValues.push(parseFloat((100 - 100 / (1 + rs)).toFixed(2)));
+    }
+    return rsiValues;
+  }
+
+  function calcMACD(arr) {
+    const ema12 = calcEMA(arr, 12);
+    const ema26 = calcEMA(arr, 26);
+    const macdLine = ema12.map((v, i) => parseFloat((v - ema26[i]).toFixed(2)));
+    const signal   = calcEMA(macdLine.slice(25), 9);
+    const histogram = signal.map((v, i) => parseFloat((macdLine[25 + i] - v).toFixed(2)));
+    return {
+      macd:      macdLine.slice(-10),
+      signal:    signal.slice(-10),
+      histogram: histogram.slice(-10),
+    };
+  }
+
+  function calcBollinger(arr, period = 20) {
+    const slice  = arr.slice(-period);
+    const sma    = slice.reduce((a, b) => a + b, 0) / period;
+    const stdDev = Math.sqrt(slice.reduce((a, b) => a + Math.pow(b - sma, 2), 0) / period);
+    return {
+      upper:  parseFloat((sma + 2 * stdDev).toFixed(2)),
+      middle: parseFloat(sma.toFixed(2)),
+      lower:  parseFloat((sma - 2 * stdDev).toFixed(2)),
+      width:  parseFloat(((4 * stdDev / sma) * 100).toFixed(2)),
+    };
+  }
+
+  function detectDivergence(arr, rsiValues) {
+    if (!rsiValues || rsiValues.length < 6) return { type: 'None detected', strength: 'NONE', desc: 'Insufficient data' };
+    const rc = arr.slice(-6);
+    const rr = rsiValues.slice(-6);
+    const pH1 = Math.max(...rc.slice(0, 3)), pH2 = Math.max(...rc.slice(3));
+    const rH1 = Math.max(...rr.slice(0, 3)), rH2 = Math.max(...rr.slice(3));
+    const pL1 = Math.min(...rc.slice(0, 3)), pL2 = Math.min(...rc.slice(3));
+    const rL1 = Math.min(...rr.slice(0, 3)), rL2 = Math.min(...rr.slice(3));
+
+    if (pH2 > pH1 && rH2 < rH1)
+      return { type: 'Regular Bearish', strength: Math.abs(rH1 - rH2) > 5 ? 'STRONG' : 'MILD',
+        desc: `Price HH ($${pH2.toFixed(0)} vs $${pH1.toFixed(0)}) but RSI LH (${rH2.toFixed(1)} vs ${rH1.toFixed(1)}) — momentum weakening, reversal risk` };
+    if (pL2 < pL1 && rL2 > rL1)
+      return { type: 'Regular Bullish', strength: Math.abs(rL1 - rL2) > 5 ? 'STRONG' : 'MILD',
+        desc: `Price LL ($${pL2.toFixed(0)} vs $${pL1.toFixed(0)}) but RSI HL (${rL2.toFixed(1)} vs ${rL1.toFixed(1)}) — selling exhausting, bounce likely` };
+    if (pH2 < pH1 && rH2 > rH1)
+      return { type: 'Hidden Bearish', strength: 'MILD', desc: 'Price LH with RSI HH — downtrend continuation signal' };
+    if (pL2 > pL1 && rL2 < rL1)
+      return { type: 'Hidden Bullish', strength: 'MILD', desc: 'Price HL with RSI LL — uptrend continuation signal' };
+    return { type: 'None detected', strength: 'NONE', desc: 'Price and RSI moving in sync — no divergence' };
+  }
+
+  const rsi    = calcRSI(closes);
+  const macd   = calcMACD(closes);
+  const bb     = calcBollinger(closes);
+  const diverg = detectDivergence(closes, rsi);
+  const ema20  = calcEMA(closes, 20);
+  const ema50  = calcEMA(closes, 50);
+  const ema200 = closes.length >= 200 ? calcEMA(closes, 200) : null;
+
+  return {
+    rsi: {
+      current:  rsi ? rsi[rsi.length - 1] : null,
+      previous: rsi ? rsi[rsi.length - 2] : null,
+      last5:    rsi ? rsi.slice(-5) : [],
+      zone:     rsi ? (rsi[rsi.length - 1] > 70 ? 'OVERBOUGHT' : rsi[rsi.length - 1] < 30 ? 'OVERSOLD' : 'NEUTRAL') : null,
+    },
+    macd,
+    bollinger: bb,
+    divergence: diverg,
+    ema20:        parseFloat(ema20[ema20.length - 1].toFixed(2)),
+    ema50:        parseFloat(ema50[ema50.length - 1].toFixed(2)),
+    ema200:       ema200 ? parseFloat(ema200[ema200.length - 1].toFixed(2)) : null,
+    currentPrice: closes[closes.length - 1],
+    priceVsEma20: closes[closes.length - 1] > ema20[ema20.length - 1] ? 'ABOVE' : 'BELOW',
+  };
+}
+
 function formatMarketData(snap) {
   const t = snap.ticker;
   if (!t) return `\n⚠️ Live market data unavailable for ${snap.symbol}: ${snap.tickerError || 'unknown error'}\n`;
@@ -168,11 +280,25 @@ function formatMarketData(snap) {
 
   for (const [tf, candles] of Object.entries(snap.candles)) {
     if (!candles.length) continue;
-    // API returns newest-first; take top 20 then reverse for chronological display
-    const last    = candles[0];
-    const display = candles.slice(0, 20).reverse();
+    // API returns newest-first; reverse for oldest-first before indicators
+    const chronological = [...candles].reverse();
+    const indicators    = calculateIndicators(chronological);
+    const last          = candles[0];
+    const display       = chronological.slice(-20);
+
     out += `\n${tf.toUpperCase()}: Last close=$${parseFloat(last.close).toFixed(0)} `;
     out += `High=$${parseFloat(last.high).toFixed(0)} Low=$${parseFloat(last.low).toFixed(0)}\n`;
+
+    if (indicators) {
+      const ind = indicators;
+      out += `RSI(14): ${ind.rsi.current} [${ind.rsi.zone}] | Last 5: ${ind.rsi.last5.join(', ')}\n`;
+      out += `MACD Histogram (last 5): ${ind.macd.histogram.slice(-5).join(', ')} (${ind.macd.histogram.slice(-1)[0] > 0 ? 'BULLISH' : 'BEARISH'})\n`;
+      out += `EMA20: $${ind.ema20} | EMA50: $${ind.ema50}${ind.ema200 ? ` | EMA200: $${ind.ema200}` : ''}\n`;
+      out += `Price vs EMA20: ${ind.priceVsEma20}\n`;
+      out += `Bollinger Bands: Upper=$${ind.bollinger.upper} Mid=$${ind.bollinger.middle} Lower=$${ind.bollinger.lower} Width=${ind.bollinger.width}%\n`;
+      out += `DIVERGENCE: ${ind.divergence.type} [${ind.divergence.strength}] — ${ind.divergence.desc}\n`;
+    }
+
     out += `Recent candles (oldest→newest):\n`;
     out += display.map(c => {
       const ts = new Date(c.time * 1000).toISOString().slice(0, 16);
