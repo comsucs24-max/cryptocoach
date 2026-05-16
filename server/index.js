@@ -964,6 +964,24 @@ function detectVolumeIntelligence(candles) {
   return { rvol:rvol.toFixed(2), rvolCategory:rvol>=3?'CLIMAX':rvol>=2?'HIGH':rvol>=1.5?'ELEVATED':'NORMAL', obvTrend:obvTrend, obvDivergence:obvDiv, climax:climax.slice(-2), isAbsorption:currVol>sma20*2&&lastRange<atr14*0.5, sma20Vol:sma20.toFixed(0), desc:'RVOL '+rvol.toFixed(1)+'x | OBV '+obvTrend+' | Div: '+obvDiv };
 }
 
+// ── SESSION & WEEKEND AWARENESS ────────────────────────────
+function detectCurrentSession() {
+  var now = new Date();
+  var hour = now.getUTCHours(), minute = now.getUTCMinutes(), day = now.getUTCDay();
+  var decimal = hour + minute / 60;
+  var isWeekend = day === 0 || day === 6;
+  var isFriday  = day === 5 && decimal >= 20;
+  if (isWeekend) return { session: 'WEEKEND', subSession: day === 0 ? 'SUNDAY' : 'SATURDAY', confidence: 'LOW', modifier: 0.65, killZone: false, advice: 'Weekend — volume 30-50% below average. All signals reduced confidence. Avoid new positions.', nextSession: 'Monday Open 00:00 UTC (05:30 IST)' };
+  if (isFriday)  return { session: 'FRIDAY_CLOSE', confidence: 'LOW', modifier: 0.70, killZone: false, advice: 'Friday close — institutions squaring positions. Weekend gap risk. Reduce size.', nextSession: 'Monday Open' };
+  if (decimal >= 8.0  && decimal < 9.0)  return { session: 'LONDON_OPEN',  killZone: true,  confidence: 'HIGH',   modifier: 1.25, advice: 'London Kill Zone 13:30-14:30 IST — highest probability setups. Strong momentum expected.' };
+  if (decimal >= 13.0 && decimal < 14.0) return { session: 'NY_OPEN',      killZone: true,  confidence: 'HIGH',   modifier: 1.25, advice: 'New York Kill Zone 18:30-19:30 IST — peak liquidity. Confirms or rejects London move.' };
+  if (decimal >= 16.0 && decimal < 17.0) return { session: 'LONDON_CLOSE', killZone: false, confidence: 'MEDIUM', modifier: 0.90, advice: 'London Close 21:30-22:30 IST — watch for reversals as institutions close daily positions.' };
+  if (decimal >= 8.0  && decimal < 13.0) return { session: 'LONDON',       killZone: false, confidence: 'MEDIUM', modifier: 1.10, advice: 'London Session 13:30-18:30 IST — reliable trends, good institutional volume.' };
+  if (decimal >= 14.0 && decimal < 22.0) return { session: 'NEW_YORK',     killZone: false, confidence: 'MEDIUM', modifier: 1.10, advice: 'New York Session 19:30-03:30 IST — strong trends, high institutional activity.' };
+  if (decimal >= 22.0 || decimal < 0.5)  return { session: 'DEAD_ZONE',    killZone: false, confidence: 'LOW',    modifier: 0.55, advice: 'Dead Zone 03:30-05:30 IST — near-zero institutional activity. Avoid new trades. High fake-move risk.' };
+  return { session: 'ASIA', killZone: false, confidence: 'LOW', modifier: 0.80, advice: 'Asia Session 05:30-13:30 IST — low volume, ranging price. Breakouts unreliable. Watch for stop hunts before London Open.' };
+}
+
 function scoreSignals(structure, fvg, ob, sweeps, regime, volume) {
   var score=0, bias=0, reasons=[];
   if (structure.trend===1)  { score+=15; bias+=1; reasons.push('Bullish structure HH/HL (+15)'); }
@@ -981,8 +999,16 @@ function scoreSignals(structure, fvg, ob, sweeps, regime, volume) {
   if (volume.obvDivergence==='BEARISH') { score+=5; bias-=1; reasons.push('OBV bearish div (+5)'); }
   if (regime.chop)              { score=Math.round(score*0.6); reasons.push('Chop regime -40%'); }
   if (regime.regime==='EXPANSION') { score=Math.min(100,Math.round(score*1.1)); reasons.push('Expansion +10%'); }
+  // Apply session confidence modifier
+  var sess = detectCurrentSession();
+  score = Math.min(100, Math.round(score * sess.modifier));
+  if (sess.killZone)                   reasons.push('KILL ZONE ' + sess.session + ' +25% confidence');
+  if (sess.session === 'WEEKEND')      reasons.push('WEEKEND -35% all signals reduced');
+  if (sess.session === 'DEAD_ZONE')    reasons.push('DEAD ZONE -45% avoid new trades');
+  if (sess.session === 'ASIA')         reasons.push('Asia session -20% low volume');
+  if (sess.session === 'FRIDAY_CLOSE') reasons.push('Friday close -30% weekend gap risk');
   score=Math.min(100,Math.max(0,score));
-  return { score:score, grade:score>=90?'A+':score>=75?'A':score>=60?'B':score>=40?'C':'D', direction:bias>0?'BULLISH':bias<0?'BEARISH':'NEUTRAL', reasons:reasons, bias:bias };
+  return { score:score, grade:score>=90?'A+':score>=75?'A':score>=60?'B':score>=40?'C':'D', direction:bias>0?'BULLISH':bias<0?'BEARISH':'NEUTRAL', reasons:reasons, bias:bias, session:sess };
 }
 
 function runTAEngine(candles, timeframe) {
@@ -1011,7 +1037,19 @@ function runTAEngine(candles, timeframe) {
 }
 
 function formatTAEngineForAI(results, symbol, mtfAlignment, avgScore) {
-  var ctx = '\n\n## PROFESSIONAL TA ENGINE — '+symbol+'\n';
+  var sess   = detectCurrentSession();
+  var nowIST = toIST(Date.now());
+  var ctx = '\n\n## SESSION AWARENESS\n';
+  ctx += 'Current Session: ' + sess.session + '\n';
+  ctx += 'IST Time: ' + nowIST + '\n';
+  ctx += 'Kill Zone: ' + (sess.killZone ? 'YES — HIGH PROBABILITY WINDOW' : 'No') + '\n';
+  ctx += 'Confidence Modifier: ' + Math.round(sess.modifier * 100) + '% of base score\n';
+  ctx += 'Advice: ' + sess.advice + '\n';
+  if (sess.session === 'WEEKEND')   ctx += 'WARNING: Weekend — all signals carry lower reliability. Prefer waiting for Monday open.\n';
+  if (sess.session === 'DEAD_ZONE') ctx += 'WARNING: Dead Zone — avoid entering new trades. High fake-move risk.\n';
+  if (sess.killZone)               ctx += 'OPPORTUNITY: Kill Zone active — highest probability trading window of the day.\n';
+  ctx += '\n';
+  ctx += '\n\n## PROFESSIONAL TA ENGINE — '+symbol+'\n';
   ctx += 'MTF Alignment: '+mtfAlignment+' | Avg Score: '+avgScore+'/100\n\n';
   Object.keys(results).forEach(function(tf) {
     var d = results[tf];
