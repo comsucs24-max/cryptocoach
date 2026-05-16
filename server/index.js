@@ -77,6 +77,11 @@ const ANALYSIS_TRIGGERS = [
   'entry point', 'where to buy', 'where to sell', 'target price', 'stop loss',
   'take profit', 'resistance level', 'support level', 'scalp', 'swing',
   'position trade', 'full analysis', 'technical view', 'ta on', 'setup on',
+  // Pattern & structure keywords
+  'pennant', 'flag', 'triangle', 'wedge', 'formation', 'pattern',
+  'check my', 'verify', 'confirm', 'breakout', 'breakdown',
+  'support', 'resistance', 'divergence', 'rsi', 'macd',
+  'volume spike', 'wick', 'candle', 'bullish', 'bearish',
 ];
 
 const SYMBOL_MAP = {
@@ -153,23 +158,30 @@ function formatMarketData(snap) {
     : 'N/A';
 
   let out = `\n## LIVE MARKET DATA FROM DELTA EXCHANGE — USE THESE EXACT PRICES\n`;
+  out += `CRITICAL: You CAN see live data below. Use these prices. Never say you cannot access charts or live data.\n\n`;
   out += `Symbol: ${snap.symbol}\n`;
   out += `Mark Price: $${markPrice.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}\n`;
   out += `24H Change: ${change24h}\n`;
   out += `24H High: $${(t.high || 0).toLocaleString()} | Low: $${(t.low || 0).toLocaleString()}\n`;
   out += `Funding Rate: ${frStr}\n\n`;
+  out += `### OHLCV CANDLE DATA (analyse these actual prices):\n`;
 
   for (const [tf, candles] of Object.entries(snap.candles)) {
     if (!candles.length) continue;
-    const display = candles.slice(-20);
-    out += `${tf.toUpperCase()} Candles (last ${display.length}):\n`;
+    // API returns newest-first; take top 20 then reverse for chronological display
+    const last    = candles[0];
+    const display = candles.slice(0, 20).reverse();
+    out += `\n${tf.toUpperCase()}: Last close=$${parseFloat(last.close).toFixed(0)} `;
+    out += `High=$${parseFloat(last.high).toFixed(0)} Low=$${parseFloat(last.low).toFixed(0)}\n`;
+    out += `Recent candles (oldest→newest):\n`;
     out += display.map(c => {
       const ts = new Date(c.time * 1000).toISOString().slice(0, 16);
-      return `  ${ts} O:${c.open} H:${c.high} L:${c.low} C:${c.close} V:${c.volume}`;
+      return `  ${ts} O:${parseFloat(c.open).toFixed(0)} H:${parseFloat(c.high).toFixed(0)} L:${parseFloat(c.low).toFixed(0)} C:${parseFloat(c.close).toFixed(0)} V:${c.volume}`;
     }).join('\n');
-    out += '\n\n';
+    out += '\n';
   }
 
+  out += `\nYou have the live data above. Analyse it directly. Never say you cannot see the chart.\n`;
   out += `IMPORTANT: Analyse these actual prices. Do not use training memory for price levels.\n`;
   return out;
 }
