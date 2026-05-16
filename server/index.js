@@ -46,6 +46,155 @@ function saveData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
+// ── Delta Exchange Integration ────────────────────────────────────────────────
+
+const DELTA_BASE = 'https://api.delta.exchange';
+
+const RESOLUTION_SECONDS = {
+  '15m': 15 * 60,
+  '1h':  3600,
+  '4h':  4 * 3600,
+  '6h':  6 * 3600,
+  '8h':  8 * 3600,
+  '12h': 12 * 3600,
+  '1d':  86400,
+  '1w':  7 * 86400,
+  '1M':  30 * 86400,
+};
+
+const MODE_TIMEFRAMES = {
+  scalp:    ['1d', '4h', '15m'],
+  swing:    ['1w', '1d', '4h'],
+  position: ['1w', '1d'],
+  full:     ['1w', '1d', '4h', '1h', '15m'],
+};
+
+const ANALYSIS_TRIGGERS = [
+  'analyse', 'analyze', 'analysis', 'give me levels', 'trade plan',
+  'long or short', 'should i buy', 'should i sell', 'should i go long',
+  'should i go short', 'quick levels', 'scan for patterns', 'mtf',
+  'multi timeframe', 'deep analyse', 'deep analyze', 'what do you think about',
+  'entry point', 'where to buy', 'where to sell', 'target price', 'stop loss',
+  'take profit', 'resistance level', 'support level', 'scalp', 'swing',
+  'position trade', 'full analysis', 'technical view', 'ta on', 'setup on',
+];
+
+const SYMBOL_MAP = {
+  btc: 'BTCUSDT', bitcoin: 'BTCUSDT',
+  eth: 'ETHUSDT', ethereum: 'ETHUSDT',
+  sol: 'SOLUSDT', solana: 'SOLUSDT',
+  bnb: 'BNBUSDT',
+  xrp: 'XRPUSDT', ripple: 'XRPUSDT',
+  ada: 'ADAUSDT', cardano: 'ADAUSDT',
+  avax: 'AVAXUSDT', avalanche: 'AVAXUSDT',
+  dot: 'DOTUSDT', polkadot: 'DOTUSDT',
+  link: 'LINKUSDT', chainlink: 'LINKUSDT',
+  doge: 'DOGEUSDT', dogecoin: 'DOGEUSDT',
+};
+
+async function deltaGet(path) {
+  const resp = await fetch(`${DELTA_BASE}${path}`, {
+    headers: { 'api-key': process.env.DELTA_API_KEY || '' },
+  });
+  if (!resp.ok) throw new Error(`Delta API ${resp.status}: ${path}`);
+  return resp.json();
+}
+
+async function fetchTicker(symbol) {
+  const data = await deltaGet('/v2/tickers');
+  const result = data.result || [];
+  const ticker = result.find(t => t.symbol === symbol);
+  if (!ticker) throw new Error(`Symbol ${symbol} not found in tickers`);
+  return ticker;
+}
+
+async function fetchCandles(symbol, resolution, limit = 100) {
+  const secs = RESOLUTION_SECONDS[resolution] || 86400;
+  const end = Math.floor(Date.now() / 1000);
+  const start = end - secs * limit;
+  const data = await deltaGet(
+    `/v2/history/candles?symbol=${symbol}&resolution=${resolution}&start=${start}&end=${end}`
+  );
+  return (data.result || []).slice(-limit);
+}
+
+async function fetchSnapshot(symbol, mode = 'swing') {
+  const timeframes = MODE_TIMEFRAMES[mode] || MODE_TIMEFRAMES.swing;
+  const limit = mode === 'full' ? 50 : 100;
+
+  const [tickerResult, ...candleResults] = await Promise.allSettled([
+    fetchTicker(symbol),
+    ...timeframes.map(tf => fetchCandles(symbol, tf, limit)),
+  ]);
+
+  return {
+    symbol,
+    mode,
+    ticker: tickerResult.status === 'fulfilled' ? tickerResult.value : null,
+    tickerError: tickerResult.status === 'rejected' ? tickerResult.reason?.message : null,
+    candles: Object.fromEntries(
+      timeframes.map((tf, i) => [
+        tf,
+        candleResults[i].status === 'fulfilled' ? candleResults[i].value : [],
+      ])
+    ),
+  };
+}
+
+function formatMarketData(snap) {
+  const t = snap.ticker;
+  if (!t) return `\n⚠️ Live market data unavailable for ${snap.symbol}: ${snap.tickerError || 'unknown error'}\n`;
+
+  const markPrice = parseFloat(t.mark_price);
+  const change24h = t.mark_change_24h != null ? `${parseFloat(t.mark_change_24h).toFixed(2)}%` : 'N/A';
+  const fr = parseFloat(t.funding_rate || 0);
+  const frStr = t.funding_rate != null
+    ? `${(fr * 100).toFixed(4)}% (${fr > 0 ? 'longs pay shorts — bearish lean' : 'shorts pay longs — bullish lean'})`
+    : 'N/A';
+
+  let out = `\n## LIVE MARKET DATA FROM DELTA EXCHANGE — USE THESE EXACT PRICES\n`;
+  out += `Symbol: ${snap.symbol}\n`;
+  out += `Mark Price: $${markPrice.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}\n`;
+  out += `24H Change: ${change24h}\n`;
+  out += `24H High: $${(t.high || 0).toLocaleString()} | Low: $${(t.low || 0).toLocaleString()}\n`;
+  out += `Funding Rate: ${frStr}\n\n`;
+
+  for (const [tf, candles] of Object.entries(snap.candles)) {
+    if (!candles.length) continue;
+    const display = candles.slice(-20);
+    out += `${tf.toUpperCase()} Candles (last ${display.length}):\n`;
+    out += display.map(c => {
+      const ts = new Date(c.time * 1000).toISOString().slice(0, 16);
+      return `  ${ts} O:${c.open} H:${c.high} L:${c.low} C:${c.close} V:${c.volume}`;
+    }).join('\n');
+    out += '\n\n';
+  }
+
+  out += `IMPORTANT: Analyse these actual prices. Do not use training memory for price levels.\n`;
+  return out;
+}
+
+function extractSymbol(text) {
+  const t = text.toLowerCase();
+  for (const [key, sym] of Object.entries(SYMBOL_MAP)) {
+    if (t.includes(key)) return sym;
+  }
+  return 'BTCUSDT';
+}
+
+function extractMode(text) {
+  const t = text.toLowerCase();
+  if (t.includes('scalp') || t.includes('15m') || t.includes('quick')) return 'scalp';
+  if (t.includes('position') || t.includes('monthly') || t.includes('1m ')) return 'position';
+  if (t.includes('full') || t.includes('mtf') || t.includes('multi')) return 'full';
+  return 'swing';
+}
+
+function isAnalysisRequest(text) {
+  const t = text.toLowerCase();
+  return ANALYSIS_TRIGGERS.some(trigger => t.includes(trigger));
+}
+
 // ── System Prompts ──────────────────────────────────────────────────────────
 
 const LEARN_SYSTEM = `You are CryptoCoach, an expert crypto trading educator. You teach using real historical examples on embedded TradingView charts.
@@ -159,6 +308,31 @@ scalp, swing, position trade, full analysis, technical view, ta on, setup on
 • Keep responses conversational and concise
 • Always match the student's level`;
 
+// ── Market snapshot endpoints ─────────────────────────────────────────────────
+
+app.get('/api/market/snapshot', async (req, res) => {
+  const symbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
+  const mode   = req.query.mode || 'swing';
+  try {
+    const snap = await fetchSnapshot(symbol, mode);
+    res.json({ success: true, ...snap });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/market/candles', async (req, res) => {
+  const symbol     = (req.query.symbol || 'BTCUSDT').toUpperCase();
+  const resolution = req.query.interval || '1d';
+  const limit      = Math.min(parseInt(req.query.limit || '100', 10), 500);
+  try {
+    const candles = await fetchCandles(symbol, resolution, limit);
+    res.json({ success: true, symbol, resolution, candles });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Chat endpoint (streaming SSE) ────────────────────────────────────────────
 
 app.post('/api/chat', async (req, res) => {
@@ -167,7 +341,32 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'messages array required' });
   }
 
-  const systemPrompt = mode === 'tutor' ? TUTOR_SYSTEM : LEARN_SYSTEM;
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+  const lastText    = lastUserMsg?.content || '';
+
+  let systemPrompt = mode === 'tutor' ? TUTOR_SYSTEM : LEARN_SYSTEM;
+  let augmentedMessages = messages;
+
+  // Inject live market data when analysis is triggered
+  if (mode === 'tutor' && isAnalysisRequest(lastText)) {
+    try {
+      const symbol = extractSymbol(lastText);
+      const snapMode = extractMode(lastText);
+      const snap = await fetchSnapshot(symbol, snapMode);
+      const marketData = formatMarketData(snap);
+
+      // Prepend market data to the last user message
+      augmentedMessages = messages.map((msg, i) => {
+        if (i === messages.length - 1 && msg.role === 'user') {
+          return { ...msg, content: `${marketData}\n\nStudent request: ${msg.content}` };
+        }
+        return msg;
+      });
+    } catch (err) {
+      console.error('Market data fetch failed:', err.message);
+      // Continue without market data — don't block the chat
+    }
+  }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -185,7 +384,7 @@ app.post('/api/chat', async (req, res) => {
           cache_control: { type: 'ephemeral' },
         },
       ],
-      messages,
+      messages: augmentedMessages,
     });
 
     for await (const chunk of stream) {
