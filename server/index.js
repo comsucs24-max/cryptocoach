@@ -8,6 +8,17 @@ const Anthropic = require('@anthropic-ai/sdk');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+function toIST(timestamp) {
+  const ms      = timestamp > 1e10 ? timestamp : timestamp * 1000;
+  const istDate = new Date(new Date(ms).getTime() + 5.5 * 60 * 60 * 1000);
+  const dd  = String(istDate.getUTCDate()).padStart(2, '0');
+  const mm  = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+  const yy  = istDate.getUTCFullYear();
+  const hh  = String(istDate.getUTCHours()).padStart(2, '0');
+  const min = String(istDate.getUTCMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yy} ${hh}:${min} IST`;
+}
+
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('❌ ERROR: ANTHROPIC_API_KEY is not set. Edit /var/www/cryptocoach/.env');
   process.exit(1);
@@ -269,8 +280,10 @@ function formatMarketData(snap) {
     ? `${(fr * 100).toFixed(4)}% (${fr > 0 ? 'longs pay shorts — bearish lean' : 'shorts pay longs — bullish lean'})`
     : 'N/A';
 
+  const nowIST = toIST(Date.now());
   let out = `\n## LIVE MARKET DATA FROM DELTA EXCHANGE — USE THESE EXACT PRICES\n`;
   out += `CRITICAL: You CAN see live data below. Use these prices. Never say you cannot access charts or live data.\n\n`;
+  out += `Data as of: ${nowIST}\n`;
   out += `Symbol: ${snap.symbol}\n`;
   out += `Mark Price: $${markPrice.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}\n`;
   out += `24H Change: ${change24h}\n`;
@@ -301,8 +314,7 @@ function formatMarketData(snap) {
 
     out += `Recent candles (oldest→newest):\n`;
     out += display.map(c => {
-      const ts = new Date(c.time * 1000).toISOString().slice(0, 16);
-      return `  ${ts} O:${parseFloat(c.open).toFixed(0)} H:${parseFloat(c.high).toFixed(0)} L:${parseFloat(c.low).toFixed(0)} C:${parseFloat(c.close).toFixed(0)} V:${c.volume}`;
+      return `  ${toIST(c.time)} O:${parseFloat(c.open).toFixed(0)} H:${parseFloat(c.high).toFixed(0)} L:${parseFloat(c.low).toFixed(0)} C:${parseFloat(c.close).toFixed(0)} V:${c.volume}`;
     }).join('\n');
     out += '\n';
   }
@@ -393,7 +405,8 @@ STEP 9 — SESSION COMPLETE
 • NEVER advance until the student has responded
 • In Step 7, wait for student to choose A/B/C/D before Step 8
 • Use REAL historical data — cite real market events
-• Be encouraging but precise — correct errors gently`;
+• Be encouraging but precise — correct errors gently
+• All timestamps in market data are IST (Indian Standard Time, UTC+5:30). Always refer to candle times in IST.`;
 
 const TUTOR_SYSTEM = `You are CryptoCoach in TUTOR MODE — an expert trading coach who guides through questions, never lectures unprompted.
 
@@ -444,7 +457,8 @@ scalp, swing, position trade, full analysis, technical view, ta on, setup on
 • NEVER say "I cannot show charts"
 • NEVER lecture unprompted (unless TA trigger fired)
 • Keep responses conversational and concise
-• Always match the student's level`;
+• Always match the student's level
+• All timestamps in market data are IST (Indian Standard Time, UTC+5:30). Always refer to candle times and price levels in IST.`;
 
 // ── Market snapshot endpoints ─────────────────────────────────────────────────
 
