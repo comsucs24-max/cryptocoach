@@ -93,6 +93,9 @@ const ANALYSIS_TRIGGERS = [
   'check my', 'verify', 'confirm', 'breakout', 'breakdown',
   'support', 'resistance', 'divergence', 'rsi', 'macd',
   'volume spike', 'wick', 'candle', 'bullish', 'bearish',
+  // SMC / new engine keywords
+  'bos', 'choch', 'fvg', 'fair value gap', 'order block',
+  'liquidity', 'sweep', 'structure', 'setup', 'what do you think',
 ];
 
 const SYMBOL_MAP = {
@@ -1295,24 +1298,45 @@ app.post('/api/chat', async (req, res) => {
   let systemPrompt = mode === 'tutor' ? TUTOR_SYSTEM : LEARN_SYSTEM;
   let augmentedMessages = messages;
 
-  // Inject live market data when analysis is triggered
+  // Inject combined market context (existing patterns + new TA engine) for analysis requests
   if (mode === 'tutor' && isAnalysisRequest(lastText)) {
     try {
-      const symbol = extractSymbol(lastText);
+      const symbol   = extractSymbol(lastText);
       const snapMode = extractMode(lastText);
-      const snap = await fetchSnapshot(symbol, snapMode);
-      const marketData = formatMarketData(snap);
+      console.log('[chat] Analysis request detected, injecting market context for', symbol);
 
-      // Prepend market data to the last user message
-      augmentedMessages = messages.map((msg, i) => {
-        if (i === messages.length - 1 && msg.role === 'user') {
-          return { ...msg, content: `${marketData}\n\nStudent request: ${msg.content}` };
+      // Fetch candle data
+      const snap = await fetchSnapshot(symbol, snapMode);
+
+      // ── Layer 1: existing engine (patterns, RSI, MACD, S/R) ────────────
+      const existingCtx = formatMarketData(snap);
+
+      // ── Layer 2: new TA engine (BOS, CHoCH, FVG, OB, sweeps, score) ───
+      const TF_LABEL = { '15m':'15m','1h':'1H','4h':'4H','6h':'6H','8h':'8H','12h':'12H','1d':'1D','1w':'1W','1M':'1M' };
+      const taResults = {};
+      for (const [tf, candles] of Object.entries(snap.candles)) {
+        if (candles && candles.length >= 60) {
+          taResults[TF_LABEL[tf] || tf.toUpperCase()] = runTAEngine(candles.slice().reverse(), TF_LABEL[tf] || tf.toUpperCase());
         }
-        return msg;
-      });
+      }
+      const valid    = Object.values(taResults).filter(r => r && r.signal);
+      const avgScore = valid.length ? Math.round(valid.reduce((a,r) => a + r.signal.score, 0) / valid.length) : 0;
+      const dirs     = valid.map(r => r.signal.direction);
+      const mtf      = dirs.every(d => d==='BULLISH') ? 'FULL_BULLISH' : dirs.every(d => d==='BEARISH') ? 'FULL_BEARISH' : 'MIXED';
+      const taCtx    = formatTAEngineForAI(taResults, symbol, mtf, avgScore);
+
+      const confluenceCtx = '\n## CONFLUENCE SCORE\n' +
+        Object.entries(taResults).filter(([,r]) => r && r.signal)
+          .map(([tf, r]) => tf + ': ' + r.signal.direction + ' ' + r.signal.score + '/100 [' + r.signal.grade + ']').join(' | ') + '\n' +
+        'MTF Alignment: ' + mtf + ' | Overall Score: ' + avgScore + '/100\n';
+
+      // ── Combined: prepend full aiContext to system prompt ───────────────
+      const aiContext = existingCtx + taCtx + confluenceCtx;
+      systemPrompt = aiContext + '\n\n' + systemPrompt;
+
     } catch (err) {
-      console.error('Market data fetch failed:', err.message);
-      // Continue without market data — don't block the chat
+      console.error('[chat] Market data fetch failed:', err.message);
+      // Continue without market data — chat still works
     }
   }
 
