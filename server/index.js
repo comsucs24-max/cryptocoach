@@ -124,7 +124,7 @@ async function fetchTicker(symbol) {
   return ticker;
 }
 
-async function fetchCandles(symbol, resolution, limit = 100) {
+async function fetchCandles(symbol, resolution, limit = 300) {
   const secs = RESOLUTION_SECONDS[resolution] || 86400;
   const end = Math.floor(Date.now() / 1000);
   const start = end - secs * limit;
@@ -136,7 +136,7 @@ async function fetchCandles(symbol, resolution, limit = 100) {
 
 async function fetchSnapshot(symbol, mode = 'swing') {
   const timeframes = MODE_TIMEFRAMES[mode] || MODE_TIMEFRAMES.swing;
-  const limit = mode === 'full' ? 50 : 100;
+  const limit = mode === 'full' ? 200 : 300;
 
   const [tickerResult, ...candleResults] = await Promise.allSettled([
     fetchTicker(symbol),
@@ -267,6 +267,63 @@ function calculateIndicators(candles) {
     currentPrice: closes[closes.length - 1],
     priceVsEma20: closes[closes.length - 1] > ema20[ema20.length - 1] ? 'ABOVE' : 'BELOW',
   };
+}
+
+function detectSupportResistance(candles, currentPrice) {
+  if (!candles || candles.length < 20) return { resistance: [], support: [] };
+
+  const highs   = candles.map(c => parseFloat(c.high));
+  const lows    = candles.map(c => parseFloat(c.low));
+  const volumes = candles.map(c => parseFloat(c.volume));
+  const pivotWindow = 5;
+  const pivotHighs = [], pivotLows = [];
+
+  for (let i = pivotWindow; i < candles.length - pivotWindow; i++) {
+    const sliceH = highs.slice(i - pivotWindow, i + pivotWindow + 1);
+    const sliceL = lows.slice(i - pivotWindow, i + pivotWindow + 1);
+    if (highs[i] === Math.max(...sliceH))
+      pivotHighs.push({ price: highs[i], idx: i, volume: volumes[i], time: candles[i].time });
+    if (lows[i] === Math.min(...sliceL))
+      pivotLows.push({ price: lows[i],  idx: i, volume: volumes[i], time: candles[i].time });
+  }
+
+  function clusterLevels(pivots) {
+    const clustered = [], used = new Set();
+    for (let i = 0; i < pivots.length; i++) {
+      if (used.has(i)) continue;
+      const cluster = [pivots[i]];
+      used.add(i);
+      for (let j = i + 1; j < pivots.length; j++) {
+        if (used.has(j)) continue;
+        if (Math.abs(pivots[i].price - pivots[j].price) / pivots[i].price < 0.005) {
+          cluster.push(pivots[j]);
+          used.add(j);
+        }
+      }
+      const avgPrice = cluster.reduce((s, p) => s + p.price, 0) / cluster.length;
+      const touches  = cluster.length;
+      clustered.push({
+        price:    parseFloat(avgPrice.toFixed(0)),
+        touches,
+        strength: touches >= 3 ? 'STRONG' : touches === 2 ? 'MODERATE' : 'WEAK',
+        volume:   cluster.reduce((s, p) => s + p.volume, 0),
+        lastSeen: cluster[cluster.length - 1].time,
+      });
+    }
+    return clustered.sort((a, b) => b.touches - a.touches);
+  }
+
+  const resistance = clusterLevels(pivotHighs)
+    .filter(l => l.price > currentPrice)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 8);
+
+  const support = clusterLevels(pivotLows)
+    .filter(l => l.price < currentPrice)
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 8);
+
+  return { resistance, support };
 }
 
 function detectChartPatterns(candles, timeframe) {
@@ -558,6 +615,26 @@ function formatMarketData(snap) {
       out += `\n  ### ${tf.toUpperCase()} — No clear patterns | Price: ${latestClose} | RSI: ${indicators?.rsi?.current ?? 'N/A'}\n`;
     }
 
+    const currentPrice = parseFloat(last.close);
+    const srLevels = detectSupportResistance(chronological, currentPrice);
+    out += `\nKEY LEVELS ON ${tf.toUpperCase()} (current price $${currentPrice.toFixed(0)}):\n`;
+    out += `RESISTANCE (above $${currentPrice.toFixed(0)}):\n`;
+    if (srLevels.resistance.length) {
+      srLevels.resistance.forEach(r =>
+        out += `  $${r.price} | ${r.strength} | ${r.touches} touch${r.touches > 1 ? 'es' : ''} | last seen ${toIST(r.lastSeen)}\n`
+      );
+    } else {
+      out += `  None detected above current price\n`;
+    }
+    out += `SUPPORT (below $${currentPrice.toFixed(0)}):\n`;
+    if (srLevels.support.length) {
+      srLevels.support.forEach(s =>
+        out += `  $${s.price} | ${s.strength} | ${s.touches} touch${s.touches > 1 ? 'es' : ''} | last seen ${toIST(s.lastSeen)}\n`
+      );
+    } else {
+      out += `  None detected below current price\n`;
+    }
+
     out += `Recent candles (oldest→newest):\n`;
     out += display.map(c => {
       return `  ${toIST(c.time)} O:${parseFloat(c.open).toFixed(0)} H:${parseFloat(c.high).toFixed(0)} L:${parseFloat(c.low).toFixed(0)} C:${parseFloat(c.close).toFixed(0)} V:${c.volume}`;
@@ -714,7 +791,8 @@ scalp, swing, position trade, full analysis, technical view, ta on, setup on
   [Description]
   Action: [what to do] | Stop: $X | Target: $X
   Learn: [Session reference]
-• After all patterns add a CONFLUENCE CHECK: if 2+ timeframes show same bias → HIGH CONVICTION. If conflicts → WAIT.`;
+• After all patterns add a CONFLUENCE CHECK: if 2+ timeframes show same bias → HIGH CONVICTION. If conflicts → WAIT.
+• When listing key levels show ALL detected levels from the SR data — resistance above and support below current price. Mark each with strength (STRONG/MODERATE/WEAK) and number of touches. More touches = more significant. Never truncate. Show all 8 resistance and 8 support levels per timeframe.`;
 
 // ── Market snapshot endpoints ─────────────────────────────────────────────────
 
