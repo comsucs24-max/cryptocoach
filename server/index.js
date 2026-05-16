@@ -778,6 +778,259 @@ function isAnalysisRequest(text) {
   return ANALYSIS_TRIGGERS.some(trigger => t.includes(trigger));
 }
 
+// ── NEW TA ENGINE (added alongside existing functions — nothing removed) ──────
+
+function detectPivots(candles, len) {
+  len = len || 50;
+  const highs = candles.map(function(c) { return parseFloat(c.high); });
+  const lows  = candles.map(function(c) { return parseFloat(c.low); });
+  const times = candles.map(function(c) { return c.time; });
+  const n     = candles.length;
+  var os = 0, pivotHighs = [], pivotLows = [];
+  for (var i = len; i < n; i++) {
+    var upper = Math.max.apply(null, highs.slice(i - len + 1, i + 1));
+    var lower = Math.min.apply(null, lows.slice(i - len + 1, i + 1));
+    var prevOs = os;
+    if (highs[i - len] > upper) os = 0;
+    else if (lows[i - len] < lower) os = 1;
+    if (os === 0 && prevOs !== 0)
+      pivotHighs.push({ price: highs[i-len], idx: i-len, time: times[i-len], ist: toIST(times[i-len]) });
+    if (os === 1 && prevOs !== 1)
+      pivotLows.push({ price: lows[i-len], idx: i-len, time: times[i-len], ist: toIST(times[i-len]) });
+  }
+  return { pivotHighs: pivotHighs, pivotLows: pivotLows, lastOs: os };
+}
+
+function detectMarketStructure(candles, pivots) {
+  const closes = candles.map(function(c) { return parseFloat(c.close); });
+  const times  = candles.map(function(c) { return c.time; });
+  const n      = candles.length;
+  if (!pivots.pivotHighs.length || !pivots.pivotLows.length)
+    return { trend: 0, structure: 'INSUFFICIENT_DATA', events: [], sequence: [], swingHighs: [], swingLows: [], lastBOS: null, lastCHoCH: null, currentTopY: 0, currentBtmY: 0 };
+  var trend = 0, topCross = true, btmCross = true, events = [], hhhl = [];
+  var topY = pivots.pivotHighs[pivots.pivotHighs.length - 1].price;
+  var btmY = pivots.pivotLows[pivots.pivotLows.length - 1].price;
+  var pH = pivots.pivotHighs, pL = pivots.pivotLows;
+  for (var i = 1; i < pH.length; i++)
+    hhhl.push({ type: pH[i].price > pH[i-1].price ? 'HH' : 'LH', price: pH[i].price, time: pH[i].time, ist: pH[i].ist });
+  for (var i = 1; i < pL.length; i++)
+    hhhl.push({ type: pL[i].price > pL[i-1].price ? 'HL' : 'LL', price: pL[i].price, time: pL[i].time, ist: pL[i].ist });
+  for (var i = 1; i < n; i++) {
+    var close = closes[i];
+    if (close > topY && topCross) {
+      var isCHoCH = trend < 0;
+      events.push({ type: isCHoCH ? 'CHoCH' : 'BOS', direction: 'BULLISH', price: topY, closeAt: close, time: times[i], ist: toIST(times[i]),
+        desc: (isCHoCH ? 'Change of Character BULLISH' : 'Break of Structure BULLISH') + ' — close $' + close.toFixed(0) + ' broke above $' + topY.toFixed(0) });
+      topCross = false; trend = 1;
+    }
+    if (close < btmY && btmCross) {
+      var isCHoCH = trend > 0;
+      events.push({ type: isCHoCH ? 'CHoCH' : 'BOS', direction: 'BEARISH', price: btmY, closeAt: close, time: times[i], ist: toIST(times[i]),
+        desc: (isCHoCH ? 'Change of Character BEARISH' : 'Break of Structure BEARISH') + ' — close $' + close.toFixed(0) + ' broke below $' + btmY.toFixed(0) });
+      btmCross = false; trend = -1;
+    }
+    var newHigh = pivots.pivotHighs.find(function(p) { return p.idx === i; });
+    var newLow  = pivots.pivotLows.find(function(p)  { return p.idx === i; });
+    if (newHigh) { topY = newHigh.price; topCross = true; }
+    if (newLow)  { btmY = newLow.price;  btmCross = true; }
+  }
+  return {
+    trend: trend,
+    structure: trend === 1 ? 'BULLISH (HH/HL)' : trend === -1 ? 'BEARISH (LH/LL)' : 'RANGING',
+    lastBOS:   events.filter(function(e) { return e.type === 'BOS'; }).slice(-1)[0] || null,
+    lastCHoCH: events.filter(function(e) { return e.type === 'CHoCH'; }).slice(-1)[0] || null,
+    lastEvent: events[events.length - 1] || null,
+    events:    events.slice(-10),
+    swingHighs: pivots.pivotHighs.slice(-5),
+    swingLows:  pivots.pivotLows.slice(-5),
+    sequence:   hhhl.sort(function(a,b) { return a.time - b.time; }).slice(-8),
+    currentTopY: topY,
+    currentBtmY: btmY,
+  };
+}
+
+function detectFVG(candles) {
+  var fvgs = [];
+  for (var i = 2; i < candles.length; i++) {
+    var c1 = candles[i-2], c2 = candles[i-1], c3 = candles[i];
+    var h1 = parseFloat(c1.high), l1 = parseFloat(c1.low);
+    var h2 = parseFloat(c2.high), l2 = parseFloat(c2.low);
+    var h3 = parseFloat(c3.high), l3 = parseFloat(c3.low);
+    var o2 = parseFloat(c2.open), cl2 = parseFloat(c2.close);
+    var body2 = Math.abs(cl2 - o2);
+    if (l3 > h1 && body2 > 0)
+      fvgs.push({ type:'BULLISH', top:l3.toFixed(0), bottom:h1.toFixed(0), midpoint:((l3+h1)/2).toFixed(0), time:c3.time, ist:toIST(c3.time), mitigated:false, strength:body2>(h2-l2)*0.7?'STRONG':'MEDIUM', desc:'Bullish FVG $'+h1.toFixed(0)+'-$'+l3.toFixed(0)+' at '+toIST(c3.time) });
+    if (h3 < l1 && body2 > 0)
+      fvgs.push({ type:'BEARISH', top:l1.toFixed(0), bottom:h3.toFixed(0), midpoint:((l1+h3)/2).toFixed(0), time:c3.time, ist:toIST(c3.time), mitigated:false, strength:body2>(h2-l2)*0.7?'STRONG':'MEDIUM', desc:'Bearish FVG $'+h3.toFixed(0)+'-$'+l1.toFixed(0)+' at '+toIST(c3.time) });
+  }
+  var cp = parseFloat(candles[candles.length-1].close);
+  fvgs.forEach(function(f) {
+    if (f.type==='BULLISH' && cp < parseFloat(f.bottom)) f.mitigated = true;
+    if (f.type==='BEARISH' && cp > parseFloat(f.top))    f.mitigated = true;
+  });
+  return { all: fvgs.slice(-20), unmitigated: fvgs.filter(function(f){ return !f.mitigated; }).slice(-8),
+    bullish: fvgs.filter(function(f){ return f.type==='BULLISH'&&!f.mitigated; }).slice(-4),
+    bearish: fvgs.filter(function(f){ return f.type==='BEARISH'&&!f.mitigated; }).slice(-4) };
+}
+
+function detectOrderBlocks(candles, structureEvents) {
+  var obs = [], cp = parseFloat(candles[candles.length-1].close);
+  (structureEvents || []).forEach(function(event) {
+    if (!event || !event.time) return;
+    var bosIdx = candles.findIndex(function(c){ return c.time >= event.time; });
+    if (bosIdx < 5) return;
+    if (event.direction === 'BULLISH') {
+      for (var i = bosIdx-1; i >= Math.max(0, bosIdx-20); i--) {
+        var o = parseFloat(candles[i].open), c = parseFloat(candles[i].close);
+        if (c < o) {
+          obs.push({ type:'BULLISH', top:parseFloat(candles[i].high).toFixed(0), bottom:parseFloat(candles[i].low).toFixed(0), time:candles[i].time, ist:toIST(candles[i].time), mitigated:cp<parseFloat(candles[i].low), bosType:event.type, desc:'Bullish OB $'+parseFloat(candles[i].low).toFixed(0)+'-$'+parseFloat(candles[i].high).toFixed(0)+' before '+event.type }); break;
+        }
+      }
+    }
+    if (event.direction === 'BEARISH') {
+      for (var i = bosIdx-1; i >= Math.max(0, bosIdx-20); i--) {
+        var o = parseFloat(candles[i].open), c = parseFloat(candles[i].close);
+        if (c > o) {
+          obs.push({ type:'BEARISH', top:parseFloat(candles[i].high).toFixed(0), bottom:parseFloat(candles[i].low).toFixed(0), time:candles[i].time, ist:toIST(candles[i].time), mitigated:cp>parseFloat(candles[i].high), bosType:event.type, desc:'Bearish OB $'+parseFloat(candles[i].low).toFixed(0)+'-$'+parseFloat(candles[i].high).toFixed(0)+' before '+event.type }); break;
+        }
+      }
+    }
+  });
+  return { all: obs.slice(-10), unmitigated: obs.filter(function(o){ return !o.mitigated; }).slice(-6),
+    bullish: obs.filter(function(o){ return o.type==='BULLISH'&&!o.mitigated; }).slice(-3),
+    bearish: obs.filter(function(o){ return o.type==='BEARISH'&&!o.mitigated; }).slice(-3) };
+}
+
+function detectLiquiditySweeps(candles, pivots) {
+  var sweeps = [], highs = candles.map(function(c){ return parseFloat(c.high); }), lows = candles.map(function(c){ return parseFloat(c.low); });
+  var closes = candles.map(function(c){ return parseFloat(c.close); }), volumes = candles.map(function(c){ return parseFloat(c.volume); });
+  var n = candles.length;
+  function volSMA(i, p) { p = p||20; var sl=volumes.slice(Math.max(0,i-p),i); return sl.reduce(function(a,b){return a+b;},0)/sl.length; }
+  pivots.pivotHighs.slice(-10).forEach(function(pivot) {
+    for (var i = pivot.idx+1; i < n; i++) {
+      if (highs[i] > pivot.price && closes[i] < pivot.price) {
+        var vr = volumes[i]/volSMA(i);
+        sweeps.push({ type:'BEARISH_SWEEP', sweptLevel:pivot.price.toFixed(0), sweepHigh:highs[i].toFixed(0), closeAt:closes[i].toFixed(0), volRatio:vr.toFixed(2), confirmed:vr>=1.5, time:candles[i].time, ist:toIST(candles[i].time), desc:'Bull Trap: wick $'+highs[i].toFixed(0)+' above $'+pivot.price.toFixed(0)+' closed $'+closes[i].toFixed(0)+' RVOL '+vr.toFixed(1)+'x'+(vr>=1.5?' ✓':'') }); break;
+      }
+    }
+  });
+  pivots.pivotLows.slice(-10).forEach(function(pivot) {
+    for (var i = pivot.idx+1; i < n; i++) {
+      if (lows[i] < pivot.price && closes[i] > pivot.price) {
+        var vr = volumes[i]/volSMA(i);
+        sweeps.push({ type:'BULLISH_SWEEP', sweptLevel:pivot.price.toFixed(0), sweepLow:lows[i].toFixed(0), closeAt:closes[i].toFixed(0), volRatio:vr.toFixed(2), confirmed:vr>=1.5, time:candles[i].time, ist:toIST(candles[i].time), desc:'Bear Trap: wick $'+lows[i].toFixed(0)+' below $'+pivot.price.toFixed(0)+' closed $'+closes[i].toFixed(0)+' RVOL '+vr.toFixed(1)+'x'+(vr>=1.5?' ✓':'') }); break;
+      }
+    }
+  });
+  return { all:sweeps.slice(-10), recent:sweeps.slice(-3), bullish:sweeps.filter(function(s){return s.type==='BULLISH_SWEEP';}).slice(-3), bearish:sweeps.filter(function(s){return s.type==='BEARISH_SWEEP';}).slice(-3) };
+}
+
+function detectVolatilityRegime(candles) {
+  var highs = candles.map(function(c){ return parseFloat(c.high); }), lows = candles.map(function(c){ return parseFloat(c.low); }), closes = candles.map(function(c){ return parseFloat(c.close); });
+  var n = candles.length;
+  function calcATR(period, endIdx) {
+    var sum=0, cnt=0;
+    for (var i=Math.max(1,endIdx-period); i<=endIdx; i++) { var tr=Math.max(highs[i]-lows[i],Math.abs(highs[i]-closes[i-1]),Math.abs(lows[i]-closes[i-1])); sum+=tr; cnt++; }
+    return cnt>0?sum/cnt:0;
+  }
+  var atr14=calcATR(14,n-1), atr50=calcATR(50,n-1);
+  var lb=Math.min(200,n), atrHist=[];
+  for (var i=n-lb; i<n; i++) atrHist.push(calcATR(14,i));
+  atrHist.sort(function(a,b){return a-b;});
+  var rank=atrHist.filter(function(v){return v<=atr14;}).length;
+  var pct=Math.round(rank/atrHist.length*100);
+  var regime=pct>=70?'EXPANSION':pct<=30?'CONTRACTION':'NORMAL';
+  return { atr14:atr14.toFixed(0), atr50:atr50.toFixed(0), percentile:pct, regime:regime, chop:atr14<atr50*0.8&&pct<40, desc:'ATR(14)=$'+atr14.toFixed(0)+' P'+pct+' '+regime };
+}
+
+function detectVolumeIntelligence(candles) {
+  var volumes=candles.map(function(c){return parseFloat(c.volume);}), highs=candles.map(function(c){return parseFloat(c.high);}), lows=candles.map(function(c){return parseFloat(c.low);}), closes=candles.map(function(c){return parseFloat(c.close);}), opens=candles.map(function(c){return parseFloat(c.open);});
+  var n=candles.length, sma20=volumes.slice(-20).reduce(function(a,b){return a+b;},0)/20, currVol=volumes[n-1], rvol=currVol/sma20;
+  var obv=0, obvSeries=[0];
+  for (var i=1; i<n; i++) { obv+=closes[i]>closes[i-1]?volumes[i]:closes[i]<closes[i-1]?-volumes[i]:0; obvSeries.push(obv); }
+  var obvRecent=obvSeries.slice(-10), pRecent=closes.slice(-10);
+  var obvTrend=obvRecent[9]>obvRecent[0]?'RISING':'FALLING', pTrend=pRecent[9]>pRecent[0]?'RISING':'FALLING';
+  var obvDiv=pTrend==='RISING'&&obvTrend==='FALLING'?'BEARISH':pTrend==='FALLING'&&obvTrend==='RISING'?'BULLISH':'NONE';
+  var climax=[];
+  for (var i=Math.max(20,n-5); i<n; i++) {
+    var avg=volumes.slice(i-20,i).reduce(function(a,b){return a+b;},0)/20;
+    if (volumes[i]>avg*3) climax.push({ time:candles[i].time, ist:toIST(candles[i].time), rvol:(volumes[i]/avg).toFixed(1), type:closes[i]>opens[i]?'BUYING_CLIMAX':'SELLING_CLIMAX', desc:(closes[i]>opens[i]?'Buying':'Selling')+' Climax RVOL '+(volumes[i]/avg).toFixed(1)+'x at '+toIST(candles[i].time) });
+  }
+  var atr14=(highs.slice(-14).reduce(function(a,c,i){return a+(c-lows.slice(-14)[i]);},0))/14;
+  var lastRange=parseFloat(candles[n-1].high)-parseFloat(candles[n-1].low);
+  return { rvol:rvol.toFixed(2), rvolCategory:rvol>=3?'CLIMAX':rvol>=2?'HIGH':rvol>=1.5?'ELEVATED':'NORMAL', obvTrend:obvTrend, obvDivergence:obvDiv, climax:climax.slice(-2), isAbsorption:currVol>sma20*2&&lastRange<atr14*0.5, sma20Vol:sma20.toFixed(0), desc:'RVOL '+rvol.toFixed(1)+'x | OBV '+obvTrend+' | Div: '+obvDiv };
+}
+
+function scoreSignals(structure, fvg, ob, sweeps, regime, volume) {
+  var score=0, bias=0, reasons=[];
+  if (structure.trend===1)  { score+=15; bias+=1; reasons.push('Bullish structure HH/HL (+15)'); }
+  if (structure.trend===-1) { score+=15; bias-=1; reasons.push('Bearish structure LH/LL (+15)'); }
+  if (structure.lastCHoCH) { score+=10; if(structure.lastCHoCH.direction==='BULLISH')bias+=1;else bias-=1; reasons.push('Recent CHoCH '+structure.lastCHoCH.direction+' (+10)'); }
+  if (structure.lastBOS)   { score+=5;  reasons.push('Recent BOS '+structure.lastBOS.direction+' (+5)'); }
+  if (fvg.bullish.length>0) { score+=10; bias+=1; reasons.push(fvg.bullish.length+' bullish FVG (+10)'); }
+  if (fvg.bearish.length>0) { score+=10; bias-=1; reasons.push(fvg.bearish.length+' bearish FVG (+10)'); }
+  if (ob.bullish.length>0)  { score+=10; bias+=1; reasons.push('Bullish OB $'+ob.bullish[0].bottom+'-$'+ob.bullish[0].top+' (+10)'); }
+  if (ob.bearish.length>0)  { score+=10; bias-=1; reasons.push('Bearish OB $'+ob.bearish[0].bottom+'-$'+ob.bearish[0].top+' (+10)'); }
+  var rs=sweeps.recent[sweeps.recent.length-1];
+  if (rs&&rs.confirmed) { score+=15; if(rs.type==='BULLISH_SWEEP')bias+=2;else bias-=2; reasons.push((rs.type==='BULLISH_SWEEP'?'Bullish':'Bearish')+' sweep confirmed RVOL '+rs.volRatio+'x (+15)'); }
+  if (volume.rvolCategory==='HIGH'||volume.rvolCategory==='CLIMAX') { score+=5; reasons.push('RVOL '+volume.rvol+'x (+5)'); }
+  if (volume.obvDivergence==='BULLISH') { score+=5; bias+=1; reasons.push('OBV bullish div (+5)'); }
+  if (volume.obvDivergence==='BEARISH') { score+=5; bias-=1; reasons.push('OBV bearish div (+5)'); }
+  if (regime.chop)              { score=Math.round(score*0.6); reasons.push('Chop regime -40%'); }
+  if (regime.regime==='EXPANSION') { score=Math.min(100,Math.round(score*1.1)); reasons.push('Expansion +10%'); }
+  score=Math.min(100,Math.max(0,score));
+  return { score:score, grade:score>=90?'A+':score>=75?'A':score>=60?'B':score>=40?'C':'D', direction:bias>0?'BULLISH':bias<0?'BEARISH':'NEUTRAL', reasons:reasons, bias:bias };
+}
+
+function runTAEngine(candles, timeframe) {
+  if (!candles||candles.length<60) return { error:'Insufficient candles', needed:60, got:candles?candles.length:0 };
+  var pivotsSwing = detectPivots(candles, 50);
+  var structure   = detectMarketStructure(candles, pivotsSwing);
+  var fvg         = detectFVG(candles);
+  var ob          = detectOrderBlocks(candles, structure.events||[]);
+  var sweeps      = detectLiquiditySweeps(candles, pivotsSwing);
+  var regime      = detectVolatilityRegime(candles);
+  var volume      = detectVolumeIntelligence(candles);
+  var signal      = scoreSignals(structure, fvg, ob, sweeps, regime, volume);
+  var cp          = parseFloat(candles[candles.length-1].close);
+  return {
+    timeframe, price:cp.toFixed(0), time:toIST(candles[candles.length-1].time),
+    structure: { trend:structure.structure, lastBOS:structure.lastBOS, lastCHoCH:structure.lastCHoCH, sequence:structure.sequence, resistanceZone:structure.currentTopY?structure.currentTopY.toFixed(0):null, supportZone:structure.currentBtmY?structure.currentBtmY.toFixed(0):null },
+    fvg:        { bullish:fvg.bullish, bearish:fvg.bearish, total:fvg.unmitigated.length },
+    orderBlocks:{ bullish:ob.bullish, bearish:ob.bearish },
+    sweeps:     { recent:sweeps.recent, last:sweeps.all[sweeps.all.length-1]||null },
+    volatility: { regime:regime.regime, atr:regime.atr14, percentile:regime.percentile, chop:regime.chop },
+    volume:     { rvol:volume.rvol, category:volume.rvolCategory, obvDivergence:volume.obvDivergence, climax:volume.climax, absorption:volume.isAbsorption },
+    signal:     { score:signal.score, grade:signal.grade, direction:signal.direction, reasons:signal.reasons },
+    summary:    '['+timeframe+'] '+signal.direction+' Score:'+signal.score+'/100 ['+signal.grade+'] | '+structure.structure+' | ATR P'+regime.percentile+' '+regime.regime+' | RVOL '+volume.rvol+'x',
+  };
+}
+
+function formatTAEngineForAI(results, symbol, mtfAlignment, avgScore) {
+  var ctx = '\n\n## PROFESSIONAL TA ENGINE — '+symbol+'\n';
+  ctx += 'MTF Alignment: '+mtfAlignment+' | Avg Score: '+avgScore+'/100\n\n';
+  Object.keys(results).forEach(function(tf) {
+    var d = results[tf];
+    if (!d||d.error) return;
+    ctx += '### '+tf+' Score:'+d.signal.score+'/100 ['+d.signal.grade+']\n';
+    ctx += 'Price: $'+d.price+' at '+d.time+'\n';
+    ctx += 'Structure: '+d.structure.trend+'\n';
+    if (d.structure.lastCHoCH) ctx += 'CHoCH: '+d.structure.lastCHoCH.desc+'\n';
+    if (d.structure.lastBOS)   ctx += 'BOS: '+d.structure.lastBOS.desc+'\n';
+    ctx += 'Levels — Resistance: $'+d.structure.resistanceZone+' | Support: $'+d.structure.supportZone+'\n';
+    d.fvg.bullish.forEach(function(f){ ctx += 'Bullish FVG: $'+f.bottom+'-$'+f.top+' ('+f.ist+')\n'; });
+    d.fvg.bearish.forEach(function(f){ ctx += 'Bearish FVG: $'+f.bottom+'-$'+f.top+' ('+f.ist+')\n'; });
+    d.orderBlocks.bullish.forEach(function(o){ ctx += 'Bullish OB: $'+o.bottom+'-$'+o.top+' ('+o.bosType+')\n'; });
+    d.orderBlocks.bearish.forEach(function(o){ ctx += 'Bearish OB: $'+o.bottom+'-$'+o.top+' ('+o.bosType+')\n'; });
+    if (d.sweeps.last) ctx += 'Last Sweep: '+d.sweeps.last.desc+'\n';
+    ctx += 'Volatility: P'+d.volatility.percentile+' '+d.volatility.regime+' ATR $'+d.volatility.atr+'\n';
+    ctx += 'Volume: RVOL '+d.volume.rvol+'x '+d.volume.category+' OBV '+d.volume.obvDivergence+'\n';
+    ctx += 'Signal reasons: '+d.signal.reasons.join(', ')+'\n\n';
+  });
+  ctx += 'Use the above analysis. Do not use training memory for price levels.\n';
+  return ctx;
+}
+
 // ── System Prompts ──────────────────────────────────────────────────────────
 
 const LEARN_SYSTEM = `You are CryptoCoach, an expert crypto trading educator. You teach using real historical examples on embedded TradingView charts.
@@ -923,6 +1176,54 @@ app.get('/api/market/candles', async (req, res) => {
     res.json({ success: true, symbol, resolution, candles });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── NEW: Test endpoint for TA engine (existing endpoints untouched) ──────────
+app.get('/api/market/test', async (req, res) => {
+  try {
+    // Normalise symbol — Delta uses BTCUSDT not BTCUSD
+    const raw    = (req.query.symbol || 'BTCUSDT').toUpperCase();
+    const symbol = raw === 'BTCUSD' ? 'BTCUSDT' : raw;
+
+    const timeframes = [
+      { label: '15m', resolution: '15m', limit: 300 },
+      { label: '1H',  resolution: '1h',  limit: 300 },
+      { label: '4H',  resolution: '4h',  limit: 300 },
+      { label: '1D',  resolution: '1d',  limit: 300 },
+      { label: '1W',  resolution: '1w',  limit: 100 },
+    ];
+
+    const results = {};
+    for (const tf of timeframes) {
+      try {
+        // reuse existing fetchCandles — handles Delta start/end correctly
+        const newest = await fetchCandles(symbol, tf.resolution, tf.limit);
+        if (newest && newest.length > 0) {
+          const chronological = newest.slice().reverse(); // oldest→newest for engine
+          results[tf.label] = runTAEngine(chronological, tf.label);
+        }
+      } catch (tfErr) {
+        results[tf.label] = { error: tfErr.message };
+      }
+    }
+
+    const valid      = Object.values(results).filter(r => r.signal);
+    const scores     = valid.map(r => r.signal.score);
+    const directions = valid.map(r => r.signal.direction);
+    const avgScore   = scores.length ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+    const allBull    = directions.every(d => d === 'BULLISH');
+    const allBear    = directions.every(d => d === 'BEARISH');
+    const mtf        = allBull ? 'FULL_BULLISH' : allBear ? 'FULL_BEARISH' : 'MIXED';
+
+    res.json({
+      symbol, ist: toIST(Date.now()),
+      mtfAlignment: mtf, avgScore,
+      timeframes: results,
+      aiContext: formatTAEngineForAI(results, symbol, mtf, avgScore),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
