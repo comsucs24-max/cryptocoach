@@ -444,7 +444,21 @@ function detectCandlePatterns(candles) {
 }
 
 // ── Price structure patterns (manual trendline logic) ────────────────────────
-function detectPricePatterns(candles) {
+function getToleranceForTimeframe(tf) {
+  const map = {
+    '15m': 0.003, '1h': 0.008, '4h': 0.015,
+    '6h':  0.018, '8h': 0.020, '12h': 0.022,
+    '1d':  0.025, '1w': 0.040, '1M':  0.060,
+  };
+  return map[tf] || 0.02;
+}
+
+function getMinGapForTimeframe(tf) {
+  const map = { '15m': 8, '1h': 6, '4h': 5 };
+  return map[tf] || 4;
+}
+
+function detectPricePatterns(candles, tf = '4h') {
   if (!candles || candles.length < 20) return [];
 
   const closes  = candles.map(c => parseFloat(c.close));
@@ -473,13 +487,15 @@ function detectPricePatterns(candles) {
 
   const highPeaks  = findPeaks(highs);
   const lowTroughs = findTroughs(lows);
+  const tolerance  = getToleranceForTimeframe(tf);
+  const minGap     = getMinGapForTimeframe(tf);
 
   // Double Top
   if (highPeaks.length >= 2) {
     const [p1, p2] = highPeaks.slice(-2);
     const diff = Math.abs(p1.val - p2.val) / p1.val;
     const gap  = p2.idx - p1.idx;
-    if (diff < 0.02 && gap >= 5 && gap <= 30) {
+    if (diff < tolerance && gap >= minGap && gap <= 60) {
       const neckline = Math.min(...lows.slice(p1.idx, p2.idx));
       const target   = p1.val - (p1.val - neckline);
       patterns.push({ name: 'Double Top', type: 'REVERSAL', bias: 'BEARISH',
@@ -496,7 +512,7 @@ function detectPricePatterns(candles) {
     const [t1, t2] = lowTroughs.slice(-2);
     const diff = Math.abs(t1.val - t2.val) / t1.val;
     const gap  = t2.idx - t1.idx;
-    if (diff < 0.02 && gap >= 5 && gap <= 30) {
+    if (diff < tolerance && gap >= minGap && gap <= 60) {
       const neckline = Math.max(...highs.slice(t1.idx, t2.idx));
       const target   = t1.val + (neckline - t1.val) * 2;
       patterns.push({ name: 'Double Bottom', type: 'REVERSAL', bias: 'BULLISH',
@@ -642,7 +658,7 @@ function detectPricePatterns(candles) {
 // ── Combined: talib candlesticks + manual price patterns ─────────────────────
 function getAllPatterns(candles, timeframe) {
   const candlePatterns = detectCandlePatterns(candles);
-  const pricePatterns  = detectPricePatterns(candles);
+  const pricePatterns  = detectPricePatterns(candles, timeframe);
   return [...candlePatterns, ...pricePatterns];
 }
 
