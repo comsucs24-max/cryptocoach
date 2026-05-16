@@ -541,18 +541,21 @@ function formatMarketData(snap) {
       out += `DIVERGENCE: ${ind.divergence.type} [${ind.divergence.strength}] — ${ind.divergence.desc}\n`;
     }
 
-    const patterns = detectChartPatterns(chronological, tf);
+    const patterns  = detectChartPatterns(chronological, tf);
+    const latestIST = toIST(last.time);
+    const latestClose = `$${parseFloat(last.close).toFixed(0)}`;
     if (patterns.length > 0) {
-      out += `PATTERNS DETECTED ON ${tf.toUpperCase()}:\n`;
       patterns.forEach(p => {
-        out += `  ★ ${p.name} [${p.bias}] [${p.confidence} confidence]\n`;
-        out += `    ${p.description}\n`;
-        out += `    Action: ${p.action}\n`;
-        if (p.neckline) out += `    Neckline: $${p.neckline} | Target: $${p.target}\n`;
-        out += `    Learn more: ${p.session}\n`;
+        out += `\n  ★ [${tf.toUpperCase()}] ${p.name}\n`;
+        out += `     Bias: ${p.bias} | Confidence: ${p.confidence}\n`;
+        out += `     Spotted at: ${latestIST} | Price: ${latestClose}\n`;
+        out += `     What: ${p.description}\n`;
+        out += `     Action: ${p.action}\n`;
+        if (p.neckline) out += `     Neckline: $${p.neckline} | Target: $${p.target}\n`;
+        out += `     Learn: ${p.session}\n`;
       });
     } else {
-      out += `PATTERNS ON ${tf.toUpperCase()}: No clear patterns detected\n`;
+      out += `\n  ### ${tf.toUpperCase()} — No clear patterns | Price: ${latestClose} | RSI: ${indicators?.rsi?.current ?? 'N/A'}\n`;
     }
 
     out += `Recent candles (oldest→newest):\n`;
@@ -562,6 +565,9 @@ function formatMarketData(snap) {
     out += '\n';
   }
 
+  out += `\nCONFLUENCE CHECK:\n`;
+  out += `If 2+ timeframes show the same bias → HIGH CONVICTION trade\n`;
+  out += `If timeframes conflict → WAIT — no clear edge\n`;
   out += `\nYou have the live data above. Analyse it directly. Never say you cannot see the chart.\n`;
   out += `IMPORTANT: Analyse these actual prices. Do not use training memory for price levels.\n`;
   return out;
@@ -701,7 +707,14 @@ scalp, swing, position trade, full analysis, technical view, ta on, setup on
 • NEVER lecture unprompted (unless TA trigger fired)
 • Keep responses conversational and concise
 • Always match the student's level
-• All timestamps in market data are IST (Indian Standard Time, UTC+5:30). Always refer to candle times and price levels in IST.`;
+• All timestamps in market data are IST (Indian Standard Time, UTC+5:30). Always refer to candle times and price levels in IST.
+• When reporting chart patterns always mention the timeframe first. Order timeframes longest→shortest: 1W → 1D → 4H → 1H → 15m. Format each pattern as:
+  ### [TF] — [Pattern Name] [BIAS] [CONFIDENCE]
+  Spotted at: DD/MM/YYYY HH:MM IST | Price: $X
+  [Description]
+  Action: [what to do] | Stop: $X | Target: $X
+  Learn: [Session reference]
+• After all patterns add a CONFLUENCE CHECK: if 2+ timeframes show same bias → HIGH CONVICTION. If conflicts → WAIT.`;
 
 // ── Market snapshot endpoints ─────────────────────────────────────────────────
 
