@@ -984,7 +984,8 @@ function scoreSignals(structure, fvg, ob, sweeps, regime, volume) {
 
 function runTAEngine(candles, timeframe) {
   if (!candles||candles.length<60) return { error:'Insufficient candles', needed:60, got:candles?candles.length:0 };
-  var pivotsSwing = detectPivots(candles, 50);
+  var pivotLen    = (timeframe === '1W' || timeframe === '1M') ? 20 : 50;
+  var pivotsSwing = detectPivots(candles, pivotLen);
   var structure   = detectMarketStructure(candles, pivotsSwing);
   var fvg         = detectFVG(candles);
   var ob          = detectOrderBlocks(candles, structure.events||[]);
@@ -1161,7 +1162,60 @@ app.get('/api/market/snapshot', async (req, res) => {
   const mode   = req.query.mode || 'swing';
   try {
     const snap = await fetchSnapshot(symbol, mode);
-    res.json({ success: true, ...snap });
+
+    // ── Existing engine output (unchanged) ──────────────────────────────────
+    const existingContext = formatMarketData(snap);
+
+    // ── New TA engine — run alongside, nothing removed ────────────────────
+    const TF_LABEL = { '15m':'15m','1h':'1H','4h':'4H','6h':'6H','8h':'8H','12h':'12H','1d':'1D','1w':'1W','1M':'1M' };
+    const taResults = {};
+    for (const [tf, candles] of Object.entries(snap.candles)) {
+      if (candles && candles.length >= 60) {
+        taResults[TF_LABEL[tf] || tf.toUpperCase()] = runTAEngine(candles.slice().reverse(), TF_LABEL[tf] || tf.toUpperCase());
+      }
+    }
+
+    // Confluence summary
+    const valid      = Object.values(taResults).filter(r => r && r.signal);
+    const avgScore   = valid.length ? Math.round(valid.reduce((a,r) => a + r.signal.score, 0) / valid.length) : 0;
+    const dirs       = valid.map(r => r.signal.direction);
+    const mtf        = dirs.every(d => d === 'BULLISH') ? 'FULL_BULLISH' : dirs.every(d => d === 'BEARISH') ? 'FULL_BEARISH' : 'MIXED';
+
+    // ── Combined AI context string ────────────────────────────────────────
+    let taSection = '\n## MARKET STRUCTURE ENGINE (per timeframe)\n';
+    for (const [tf, r] of Object.entries(taResults)) {
+      if (!r || r.error) { taSection += tf + ': ' + (r && r.error ? r.error : 'no data') + '\n'; continue; }
+      taSection += '\n[' + tf + '] ' + r.signal.direction + ' ' + r.signal.score + '/100 [' + r.signal.grade + ']\n';
+      taSection += 'Structure: ' + r.structure.trend + '\n';
+      if (r.structure.lastCHoCH) taSection += 'CHoCH: ' + r.structure.lastCHoCH.desc + '\n';
+      if (r.structure.lastBOS)   taSection += 'BOS: '   + r.structure.lastBOS.desc   + '\n';
+      taSection += 'Levels — Resistance: $' + r.structure.resistanceZone + ' | Support: $' + r.structure.supportZone + '\n';
+      r.fvg.bullish.forEach(f => { taSection += 'Bullish FVG: $' + f.bottom + '-$' + f.top + ' (' + f.ist + ')\n'; });
+      r.fvg.bearish.forEach(f => { taSection += 'Bearish FVG: $' + f.bottom + '-$' + f.top + ' (' + f.ist + ')\n'; });
+      r.orderBlocks.bullish.forEach(o => { taSection += 'Bullish OB: $' + o.bottom + '-$' + o.top + ' (' + o.bosType + ')\n'; });
+      r.orderBlocks.bearish.forEach(o => { taSection += 'Bearish OB: $' + o.bottom + '-$' + o.top + ' (' + o.bosType + ')\n'; });
+      if (r.sweeps.last) taSection += 'Last Sweep: ' + r.sweeps.last.desc + '\n';
+      taSection += 'Volatility: P' + r.volatility.percentile + ' ' + r.volatility.regime + ' ATR $' + r.volatility.atr + '\n';
+      taSection += 'Volume: RVOL ' + r.volume.rvol + 'x ' + r.volume.category + ' OBV ' + r.volume.obvDivergence + '\n';
+      taSection += 'Reasons: ' + r.signal.reasons.join(', ') + '\n';
+    }
+
+    const confluenceSection = '\n## CONFLUENCE SCORE\n' +
+      Object.entries(taResults).filter(([,r]) => r && r.signal)
+        .map(([tf, r]) => tf + ': ' + r.signal.direction + ' ' + r.signal.score + '/100 [' + r.signal.grade + ']').join(' | ') + '\n' +
+      'MTF Alignment: ' + mtf + '\n' +
+      'Overall Score: ' + avgScore + '/100\n';
+
+    const aiContext = existingContext + taSection + confluenceSection;
+
+    res.json({
+      success: true,
+      ...snap,
+      taEngine:     taResults,
+      mtfAlignment: mtf,
+      avgScore,
+      aiContext,
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
