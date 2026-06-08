@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Academy — kisaniq.in</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c0f;--bg2:#111318;--bg3:#181c22;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8eaf0;--text2:#7a8090;--text3:#4a5060;--green:#00d68f;--red:#ff5757;--amber:#ffb830;--blue:#4da6ff;--purple:#a78bfa;--green-dim:rgba(0,214,143,0.1);--red-dim:rgba(255,87,87,0.1);--amber-dim:rgba(255,184,48,0.09);--blue-dim:rgba(77,166,255,0.09);--card:#13161c;--r:12px;--fh:'Syne',sans-serif;--fb:'Inter',sans-serif;--fm:'DM Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.6;min-height:100vh;}
+.site-header{position:sticky;top:0;z-index:100;background:rgba(10,12,15,0.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;height:58px;}
+.logo{font-family:var(--fh);font-size:17px;font-weight:800;letter-spacing:-.02em;}
+.logo span{color:var(--green);}
+.nav-pills{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;}
+.npill{padding:5px 12px;border-radius:20px;border:1px solid transparent;background:transparent;color:var(--text2);cursor:pointer;font-size:11px;font-family:var(--fm);text-decoration:none;transition:all .15s;}
+.npill:hover{color:var(--text);background:var(--bg3);}
+.prog-bar{height:2px;background:var(--bg3);}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));transition:width .4s;width:0%;}
+.main{max-width:1200px;margin:0 auto;padding:32px 24px;position:relative;}
+.hero{text-align:center;padding:48px 0 36px;}
+.hero-tag{font-family:var(--fm);font-size:11px;color:var(--green);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;}
+.hero-title{font-family:var(--fh);font-size:clamp(34px,6vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:14px;}
+.hero-title .ac{color:var(--green);}
+.hero-sub{font-size:15px;color:var(--text2);max-width:500px;margin:0 auto 28px;}
+.hero-stats{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;}
+.hstat-n{font-family:var(--fh);font-size:26px;font-weight:700;color:var(--green);}
+.hstat-l{font-size:10px;color:var(--text3);font-family:var(--fm);letter-spacing:.1em;margin-top:2px;}
+.section{margin-bottom:48px;}
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.sec-num{font-family:var(--fm);font-size:11px;color:var(--text3);}
+.sec-title{font-family:var(--fh);font-size:20px;font-weight:700;letter-spacing:-.02em;}
+.badge{font-family:var(--fm);font-size:10px;padding:2px 7px;border-radius:3px;font-weight:500;}
+.bg{background:var(--green-dim);color:var(--green);}
+.br{background:var(--red-dim);color:var(--red);}
+.ba{background:var(--amber-dim);color:var(--amber);}
+.bb{background:var(--blue-dim);color:var(--blue);}
+.bp{background:rgba(167,139,250,0.1);color:var(--purple);}
+.prog-section{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:40px;}
+.prog-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.prog-hdr-title{font-family:var(--fh);font-size:15px;font-weight:700;}
+.reset-btn{font-size:11px;font-family:var(--fm);color:var(--text3);cursor:pointer;border:none;background:none;padding:4px;}
+.reset-btn:hover{color:var(--red);}
+.prog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;}
+.prog-item{background:var(--bg3);border-radius:8px;padding:11px 13px;}
+.prog-label{font-size:10px;color:var(--text3);font-family:var(--fm);margin-bottom:5px;}
+.prog-bar-w{height:3px;background:var(--bg);border-radius:2px;overflow:hidden;margin-bottom:5px;}
+.prog-bar-f{height:100%;border-radius:2px;transition:width .4s;}
+.prog-count{font-family:var(--fm);font-size:10px;color:var(--text2);}
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;}
+.mcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;cursor:pointer;transition:all .18s;position:relative;}
+.mcard:hover{border-color:var(--border2);transform:translateY(-2px);}
+.mcard.done{border-color:rgba(0,214,143,0.2);}
+.mcard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;}
+.mcard-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.mcard-chk{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);}
+.mcard-chk.done{background:var(--green);border-color:var(--green);color:#000;}
+.mcard-title{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:3px;}
+.mcard-desc{font-size:12px;color:var(--text2);line-height:1.5;}
+.mcard-meta{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.mmeta{font-family:var(--fm);font-size:10px;color:var(--text3);}
+.lesson-panel{display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:16px;}
+.lesson-panel.open{display:block;}
+.lesson-nav{display:flex;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.lesson-nav-title{font-family:var(--fh);font-size:13px;font-weight:700;margin-right:auto;}
+.lnb{padding:5px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;font-family:var(--fm);}
+.lnb.active{background:var(--green-dim);color:var(--green);border-color:rgba(0,214,143,0.3);}
+.lesson-body{padding:18px 16px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.con-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px;}
+.ccard{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:12px;}
+.ctag{font-size:10px;font-family:var(--fm);font-weight:500;padding:2px 6px;border-radius:3px;display:inline-block;margin-bottom:5px;}
+.ctitle{font-size:13px;font-weight:600;margin-bottom:3px;font-family:var(--fh);}
+.cbody{font-size:12px;color:var(--text2);line-height:1.5;}
+.rules-box{background:var(--bg3);border-radius:9px;padding:14px 16px;margin-bottom:12px;}
+.rules-title{font-family:var(--fh);font-size:12px;font-weight:700;margin-bottom:8px;}
+.rule{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:4px;padding-left:10px;border-left:2px solid var(--border2);}
+.rule.g{border-color:var(--green);color:rgba(0,214,143,0.85);}
+.rule.b{border-color:var(--red);color:rgba(255,87,87,0.85);}
+.rule.w{border-color:var(--amber);color:rgba(255,184,48,0.85);}
+.mark-done{margin-top:14px;padding:7px 18px;border-radius:8px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);cursor:pointer;font-size:11px;font-family:var(--fm);transition:all .15s;}
+.mark-done:hover,.mark-done.done{background:var(--green);color:#000;}
+.quiz-nav{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.qnum{width:26px;height:26px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-family:var(--fm);display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.qnum:hover{color:var(--text);}
+.qnum.active{background:var(--green-dim);color:var(--green);border-color:rgba(0,214,143,0.3);}
+.qnum.solved{background:rgba(0,214,143,0.07);border-color:rgba(0,214,143,0.2);color:var(--green);}
+.qsolve-ct{font-family:var(--fm);font-size:10px;color:var(--text3);margin-left:auto;}
+.qcard{background:var(--bg3);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.qcard-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid var(--border);}
+.qcoin{font-family:var(--fh);font-size:13px;font-weight:700;}
+.qtf{font-size:10px;font-family:var(--fm);color:var(--text3);background:var(--bg);padding:2px 7px;border-radius:4px;}
+.qhint{font-size:11px;color:var(--text3);padding:5px 13px;border-bottom:1px solid var(--border);font-style:italic;font-family:var(--fm);}
+.qleg-row{display:flex;gap:10px;flex-wrap:wrap;padding:5px 13px;border-bottom:1px solid var(--border);}
+.qleg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);font-family:var(--fm);}
+.qleg-dot{width:10px;height:2px;border-radius:1px;}
+.reveal-zone{padding:11px 13px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;}
+.rev-btn{padding:6px 16px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:11px;font-family:var(--fm);transition:all .15s;}
+.rev-btn:hover{border-color:var(--green);color:var(--green);}
+.ans-box{display:none;flex:1;font-size:12px;line-height:1.6;padding:9px 12px;border-radius:7px;}
+.ans-box.bull{background:rgba(0,214,143,0.07);color:rgba(0,214,143,0.9);}
+.ans-box.bear{background:rgba(255,87,87,0.07);color:rgba(255,87,87,0.85);}
+.ans-box.warn{background:rgba(255,184,48,0.07);color:rgba(255,184,48,0.85);}
+.intro-box{font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px;padding:12px 14px;background:var(--bg3);border-radius:8px;border-left:2px solid var(--green);}
+.site-footer{border-top:1px solid var(--border);padding:20px 24px;text-align:center;font-size:11px;color:var(--text3);font-family:var(--fm);margin-top:60px;}
+canvas{display:block;}
+@media(max-width:600px){.hero-title{font-size:30px;}.nav-pills{display:none;}.main{padding:18px 14px;}}
+::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px;}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">Trading<span>Academy</span></div>
+    <nav class="nav-pills">
+      <a class="npill" href="#progress">Progress</a>
+      <a class="npill" href="#modules-section">Modules</a>
+    </nav>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="globalProg"></div></div>
+</header>
+<main class="main">
+<div class="hero">
+  <div class="hero-tag">kisaniq.in — personal trading education</div>
+  <h1 class="hero-title">Chart Mastery<br><span class="ac">Academy</span></h1>
+  <p class="hero-sub">RSI divergence · Chart patterns · EMA strategy · W&M necklines · Advanced formations. With quizzes to test yourself after each module.</p>
+  <div class="hero-stats">
+    <div><div class="hstat-n">6</div><div class="hstat-l">MODULES</div></div>
+    <div><div class="hstat-n">30+</div><div class="hstat-l">QUIZ CHARTS</div></div>
+    <div><div class="hstat-n">4H/1D</div><div class="hstat-l">TIMEFRAMES</div></div>
+  </div>
+</div>
+<div class="prog-section" id="progress">
+  <div class="prog-hdr">
+    <div class="prog-hdr-title">Your progress</div>
+    <button class="reset-btn" onclick="resetProgress()">Reset all</button>
+  </div>
+  <div class="prog-grid" id="progGrid"></div>
+</div>
+<div class="section" id="modules-section">
+  <div class="sec-hdr"><span class="sec-num">—</span><h2 class="sec-title">Modules</h2></div>
+  <div class="mod-grid" id="moduleGrid"></div>
+</div>
+<div id="lessonContainer"></div>
+</main>
+<footer class="site-footer">kisaniq.in · Trading Academy · progress saved locally in your browser</footer>
+
+<script>
+const DR=window.devicePixelRatio||1;
+const K={up:'#00d68f',dn:'#ff5757',wk:'rgba(255,255,255,0.2)',gr:'rgba(255,255,255,0.04)',ax:'rgba(255,255,255,0.3)',e20:'#ffb830',e50:'#4da6ff',e200:'rgba(255,87,87,0.65)',tl:'#a78bfa',nl:'#ffb830',cup:'#00d68f',wedge:'#ff5757',div:'#ffb830'};
+
+// ── MODULES ──────────────────────────────────────────────────────────────────
+const MODULES=[
+{id:'rsi',num:'01',title:'RSI Divergence',icon:'📈',ibg:'rgba(0,214,143,0.1)',badge:'Foundation',bcls:'bg',
+ desc:'Identify bullish & bearish divergence using RSI vs price swing points. The most important momentum signal.',
+ meta:['4 quiz charts','4H · 1D · 1W','bullish · bearish · trap'],
+ intro:'RSI divergence is when price and momentum disagree. Price makes a new low but RSI refuses to follow = hidden buying. Price makes a new high but RSI is weaker = hidden selling. You always anchor to price\'s swing candle first, then look straight down at RSI at that same bar.',
+ concepts:[
+  {tag:'Bullish',tc:'bg',title:'Lower low on price',body:'Price makes a lower low (B below A) but RSI makes a higher low (RSI at B above RSI at A). Disagreement = hidden strength. Sellers running out of steam. Most powerful when RSI is in oversold zone (<30).'},
+  {tag:'Bearish',tc:'br',title:'Higher high on price',body:'Price makes a higher high (B above A) but RSI makes a lower high (RSI at B below RSI at A). Momentum fading even as price climbs. Most powerful when RSI is in overbought zone (>70).'},
+  {tag:'Rule #1',tc:'ba',title:'Lock price swing first',body:'Never look at RSI\'s own swing lows. Find price\'s swing candle first, then look straight down to RSI at that exact bar. Compare RSI values at price\'s swing candles — not at RSI\'s own peaks/troughs.'},
+  {tag:'Rule #2',tc:'bb',title:'Timeframe reliability',body:'1m/5m: noise, skip. 15m/1H: tradeable with volume confirmation. 4H: sweet spot for crypto — high reliability. Daily: major signal, pattern took weeks. Weekly: cycle-level signal.'},
+ ],
+ rules:[
+  {t:'Find price swing low A → note RSI value at that exact candle',g:true},
+  {t:'Price dips to swing low B (lower than A) → note RSI at candle B',g:true},
+  {t:'RSI at B higher than A → bullish divergence confirmed',g:true},
+  {t:'RSI in oversold (<30) at the swing points = maximum conviction',g:true},
+  {t:'Look for volume expansion on the subsequent bounce',g:true},
+  {t:'Never compare RSI\'s own peaks to price\'s peaks — use price\'s swing candles only',g:false},
+  {t:'Do not trade on 1m/5m charts — far too noisy',g:false},
+  {t:'Divergence without any other confirmation (volume, pattern, EMA support) = weak signal',g:false},
+ ],
+ quizzes:[
+  {coin:'BTC/USDT',tf:'4H',hint:'Look at the two marked points A and B on price. Price went lower. What did RSI do at those same candles?',dir:'bull',
+   pat:'Bullish divergence — accumulation bottom',
+   ans:'Price made a lower low at B vs A. RSI at B (~33) is higher than RSI at A (~36). Momentum diverging upward = hidden buying. This was BTC\'s accumulation zone in late 2022. Entry: break of local resistance or RSI crossing back above 40. Stop below swing B low.',
+   candles:[{o:17200,h:17800,l:16800,c:17100},{o:17100,h:17300,l:16600,c:16700},{o:16700,h:17000,l:16400,c:16900},{o:16900,h:17200,l:16300,c:16350},{o:16350,h:16700,l:16050,c:16500},{o:16500,h:16900,l:16200,c:16800},{o:16800,h:17100,l:16600,c:16950},{o:16950,h:17400,l:16800,c:17300},{o:17300,h:17800,l:17100,c:17600},{o:17600,h:18100,l:17400,c:17500},{o:17500,h:17700,l:17100,c:17200},{o:17200,h:17400,l:16900,c:17050},{o:17050,h:17300,l:16700,c:16800},{o:16800,h:17000,l:16400,c:16450},{o:16450,h:16800,l:16200,c:16600},{o:16600,h:17000,l:16400,c:16900},{o:16900,h:17300,l:16700,c:17200},{o:17200,h:17600,l:17000,c:17500},{o:17500,h:18000,l:17300,c:17800},{o:17800,h:18300,l:17600,c:18100}],
+   rsi:[42,39,44,36,34,40,45,50,54,51,46,42,38,33,36,41,47,53,58,63],swA:3,swB:13,swT:'low'},
+  {coin:'ETH/USDT',tf:'1D',hint:'Price is making higher highs. What is RSI doing at those same peak candles?',dir:'bear',
+   pat:'Bearish divergence — distribution top',
+   ans:'Price pushed to higher high at B. RSI at B (~68) is lower than RSI at A (~75). Momentum fading while price climbed = sellers absorbing. A major drop followed within 2 weeks. This is one of the clearest bearish divergence setups in ETH\'s history.',
+   candles:[{o:1720,h:1820,l:1680,c:1790},{o:1790,h:1900,l:1760,c:1850},{o:1850,h:1980,l:1820,c:1940},{o:1940,h:2050,l:1910,c:2020},{o:2020,h:2100,l:1980,c:2080},{o:2080,h:2150,l:2040,c:2100},{o:2100,h:2130,l:2030,c:2060},{o:2060,h:2090,l:1980,c:2000},{o:2000,h:2070,l:1950,c:2040},{o:2040,h:2120,l:2010,c:2090},{o:2090,h:2180,l:2060,c:2160},{o:2160,h:2260,l:2130,c:2230},{o:2230,h:2340,l:2200,c:2310},{o:2310,h:2420,l:2280,c:2390},{o:2390,h:2480,l:2350,c:2450},{o:2450,h:2500,l:2400,c:2470},{o:2470,h:2490,l:2390,c:2410},{o:2410,h:2440,l:2330,c:2360},{o:2360,h:2390,l:2250,c:2280},{o:2280,h:2310,l:2150,c:2180}],
+   rsi:[52,56,62,68,73,75,72,68,65,67,70,74,77,80,78,74,70,65,60,55],swA:5,swB:13,swT:'high'},
+  {coin:'SOL/USDT',tf:'4H',hint:'Two clear swing lows. Compare price at B vs A, then RSI at the same candles.',dir:'bull',
+   pat:'Bullish divergence — oversold zone',
+   ans:'Bullish divergence. Price low at B (17.4) is below low at A (17.8). RSI at B (29) is higher than RSI at A (33). Both points are in the oversold zone — maximum conviction. This is the setup your RSI scanner hunts for. Entry on RSI crossing back above 35.',
+   candles:[{o:19.5,h:20.8,l:19.1,c:20.3},{o:20.3,h:21.2,l:19.8,c:20.0},{o:20.0,h:20.5,l:18.9,c:19.2},{o:19.2,h:19.8,l:18.4,c:18.6},{o:18.6,h:19.2,l:17.8,c:18.9},{o:18.9,h:19.8,l:18.5,c:19.5},{o:19.5,h:20.4,l:19.2,c:20.1},{o:20.1,h:21.0,l:19.8,c:20.8},{o:20.8,h:21.8,l:20.4,c:21.5},{o:21.5,h:22.2,l:21.0,c:21.8},{o:21.8,h:22.5,l:21.2,c:21.4},{o:21.4,h:21.8,l:20.6,c:20.9},{o:20.9,h:21.3,l:19.8,c:20.1},{o:20.1,h:20.5,l:18.8,c:19.0},{o:19.0,h:19.6,l:17.4,c:18.2},{o:18.2,h:19.2,l:17.8,c:19.0},{o:19.0,h:20.2,l:18.8,c:20.0},{o:20.0,h:21.2,l:19.6,c:21.0},{o:21.0,h:22.4,l:20.7,c:22.1},{o:22.1,h:23.6,l:21.8,c:23.2}],
+   rsi:[50,47,42,37,33,38,44,50,56,59,55,50,44,38,29,35,42,50,57,64],swA:4,swB:14,swT:'low'},
+  {coin:'DOGE/USDT',tf:'4H',hint:'Price keeps falling. Is RSI diverging from price or moving with it?',dir:'warn',
+   pat:'NO divergence — confirmed downtrend, do not force it',
+   ans:'TRAP. Both price AND RSI are making lower lows in sync. When both lines move together = trend confirmation, not divergence. There is no disagreement. Beginners often see falling price and look for divergence everywhere. If RSI is also making lower lows at the same candles — skip it. This is just a downtrend.',
+   candles:[{o:0.088,h:0.094,l:0.085,c:0.091},{o:0.091,h:0.095,l:0.087,c:0.089},{o:0.089,h:0.092,l:0.082,c:0.084},{o:0.084,h:0.087,l:0.079,c:0.081},{o:0.081,h:0.085,l:0.075,c:0.078},{o:0.078,h:0.082,l:0.073,c:0.080},{o:0.080,h:0.084,l:0.076,c:0.078},{o:0.078,h:0.081,l:0.071,c:0.073},{o:0.073,h:0.077,l:0.067,c:0.070},{o:0.070,h:0.074,l:0.065,c:0.067},{o:0.067,h:0.071,l:0.062,c:0.064},{o:0.064,h:0.068,l:0.060,c:0.062},{o:0.062,h:0.066,l:0.057,c:0.060},{o:0.060,h:0.063,l:0.055,c:0.057},{o:0.057,h:0.061,l:0.052,c:0.054},{o:0.054,h:0.058,l:0.050,c:0.052},{o:0.052,h:0.056,l:0.048,c:0.050},{o:0.050,h:0.054,l:0.046,c:0.048},{o:0.048,h:0.052,l:0.044,c:0.046},{o:0.046,h:0.050,l:0.042,c:0.044}],
+   rsi:[52,49,44,40,36,38,36,32,28,25,22,20,18,16,14,12,11,10,9,8],swA:4,swB:14,swT:'low'},
+ ]},
+{id:'patterns',num:'02',title:'Continuation Patterns',icon:'🔀',ibg:'rgba(77,166,255,0.1)',badge:'Intermediate',bcls:'bb',
+ desc:'Bull flags, ascending triangles, symmetrical triangles, and falling wedge pullbacks in uptrends.',
+ meta:['3 quiz charts','4H · 1D','5 pattern types'],
+ intro:'Continuation patterns form when a trend pauses to breathe. Price consolidates, weak hands shake out, and then the trend resumes. The key rule: identify the prevailing trend BEFORE you label any pattern. The same triangle in an uptrend vs downtrend has completely different implications.',
+ concepts:[
+  {tag:'Bull flag',tc:'bg',title:'Pole + tight pullback',body:'Strong impulse (pole) followed by parallel descending channel (flag). Volume drops inside the flag. Entry: breakout above flag upper trendline. Stop: below flag low. Target: pole height added to breakout.'},
+  {tag:'Asc. triangle',tc:'bg',title:'Flat top + rising lows',body:'Horizontal resistance with higher lows = buyers getting aggressive each dip. Breakout above flat resistance = continuation long. Volume expanding on breakout = confirmation.'},
+  {tag:'Sym. triangle',tc:'ba',title:'Context determines direction',body:'Converging trendlines compress price. In uptrend = expect upside break. In downtrend = expect downside break. Never trade both directions — pick one based on trend. Volume shrinks into apex.'},
+  {tag:'Falling wedge',tc:'bb',title:'Pullback in uptrend = bull',body:'In an uptrend, a falling wedge is a healthy pullback — both lines slope down and converge. Sellers weakening each candle. Breakout above upper trendline = continuation entry.'},
+ ],
+ rules:[
+  {t:'Identify the prevailing trend BEFORE labelling any pattern',g:true},
+  {t:'Wait for candle CLOSE outside the pattern — not a wick poke',g:true},
+  {t:'Volume should drop inside the pattern and spike on breakout',g:true},
+  {t:'Target = height of pattern projected from the breakout point',g:true},
+  {t:'EMA 50 should be rising below price in a bull continuation setup',g:true},
+  {t:'Do not trade a pattern that formed in fewer than 5 candles on your timeframe',g:false},
+  {t:'Do not trade a symmetrical triangle in both directions — trend context picks the side',g:false},
+  {t:'Avoid patterns that are too steep (>45° slope on either line)',g:false},
+ ],
+ quizzes:[
+  {coin:'BTC/USDT',tf:'1D',hint:'After a strong rally (the pole), what shape is the consolidation forming?',dir:'bull',
+   pat:'Bull flag — bullish continuation',
+   ans:'Bull flag. The pole = sharp rally candles 1-7. The flag = descending parallel channel candles 8-16 with volume dropping. EMA 50 rising below as dynamic support. Entry: breakout above flag upper trendline. Stop: below flag low. Target: pole height added to breakout level.',
+   candles:[{o:28000,h:28500,l:27600,c:28200},{o:28200,h:29100,l:28000,c:28900},{o:28900,h:30200,l:28700,c:30000},{o:30000,h:31500,l:29800,c:31200},{o:31200,h:32800,l:31000,c:32500},{o:32500,h:34000,l:32200,c:33700},{o:33700,h:35200,l:33500,c:35000},{o:35000,h:36200,l:34600,c:35200},{o:35200,h:35600,l:34200,c:34600},{o:34600,h:35000,l:33600,c:34000},{o:34000,h:34500,l:32900,c:33300},{o:33300,h:33800,l:32500,c:32800},{o:32800,h:33400,l:32100,c:32500},{o:32500,h:33000,l:31800,c:32200},{o:32200,h:32800,l:31600,c:32600},{o:32600,h:33400,l:32200,c:33200},{o:33200,h:34600,l:33000,c:34400},{o:34400,h:36200,l:34200,c:36000},{o:36000,h:38000,l:35800,c:37800},{o:37800,h:40000,l:37600,c:39500}],
+   ema50:[27200,27400,27700,28100,28600,29200,29800,30400,30900,31200,31400,31400,31300,31200,31100,31100,31300,31700,32400,33400],
+   ema200:[24000,24100,24300,24600,25000,25500,26100,26700,27200,27700,28100,28400,28600,28800,29000,29200,29500,29900,30400,31000],
+   draws:[{t:'hline',y:35200,color:K.nl,dash:[5,3],lbl:'flag top'},{t:'hline',y:31600,color:K.tl,dash:[4,3],lbl:'flag bottom — entry on break above top'}]},
+  {coin:'SOL/USDT',tf:'4H',hint:'Look at the top of price action. Is it flat or rising? And how are the lows behaving?',dir:'bull',
+   pat:'Ascending triangle — bullish continuation',
+   ans:'Ascending triangle. Flat resistance at ~26.4, rising support (higher lows). Buyers get more aggressive each dip = accumulation pressure. EMA 50 rising below. Entry: breakout above flat resistance line. Volume should spike. Target = triangle height added above resistance. The breakout at candle 19 is the trade.',
+   candles:[{o:21.0,h:22.4,l:20.6,c:22.0},{o:22.0,h:23.5,l:21.6,c:23.0},{o:23.0,h:24.2,l:22.5,c:23.8},{o:23.8,h:25.0,l:23.2,c:24.6},{o:24.6,h:25.8,l:24.0,c:25.4},{o:25.4,h:26.5,l:24.6,c:25.0},{o:25.0,h:25.8,l:23.8,c:24.6},{o:24.6,h:25.8,l:24.0,c:25.4},{o:25.4,h:26.4,l:25.0,c:25.9},{o:25.9,h:26.4,l:25.3,c:25.6},{o:25.6,h:26.4,l:25.0,c:25.2},{o:25.2,h:25.8,l:24.4,c:25.0},{o:25.0,h:25.8,l:24.6,c:25.4},{o:25.4,h:26.4,l:25.0,c:26.0},{o:26.0,h:26.4,l:25.5,c:25.8},{o:25.8,h:26.4,l:25.4,c:26.1},{o:26.1,h:26.4,l:25.7,c:26.2},{o:26.2,h:26.4,l:25.9,c:26.3},{o:26.3,h:28.5,l:26.1,c:28.2},{o:28.2,h:30.4,l:27.8,c:30.0}],
+   ema50:[20.2,20.4,20.7,21.1,21.5,21.9,22.2,22.5,22.8,23.0,23.2,23.3,23.5,23.6,23.8,23.9,24.0,24.2,24.5,25.1],
+   ema200:[18.0,18.1,18.2,18.4,18.6,18.8,19.0,19.2,19.4,19.6,19.7,19.8,20.0,20.1,20.3,20.4,20.5,20.7,21.0,21.6],
+   draws:[{t:'hline',y:26.4,color:K.nl,dash:[4,3],lbl:'flat resistance — entry on breakout'}]},
+  {coin:'ADA/USDT',tf:'4H',hint:'50 EMA is BELOW 200 EMA. Look at the shape of the consolidation — same pattern, different context.',dir:'bear',
+   pat:'Symmetrical triangle in downtrend — bearish continuation',
+   ans:'Symmetrical triangle in a DOWNTREND (death cross — 50 below 200 EMA). In an uptrend this would be a bullish continuation setup. But with 50 EMA below 200 EMA, the trend is bearish. The triangle breaks DOWN, continuing the downtrend. Trend context completely changes the trade direction — this is the most important lesson.',
+   candles:[{o:0.420,h:0.436,l:0.412,c:0.430},{o:0.430,h:0.444,l:0.418,c:0.424},{o:0.424,h:0.435,l:0.408,c:0.412},{o:0.412,h:0.424,l:0.400,c:0.406},{o:0.406,h:0.420,l:0.396,c:0.416},{o:0.416,h:0.428,l:0.408,c:0.422},{o:0.422,h:0.432,l:0.412,c:0.418},{o:0.418,h:0.426,l:0.410,c:0.414},{o:0.414,h:0.422,l:0.406,c:0.410},{o:0.410,h:0.418,l:0.404,c:0.408},{o:0.408,h:0.416,l:0.402,c:0.412},{o:0.412,h:0.418,l:0.406,c:0.408},{o:0.408,h:0.414,l:0.404,c:0.406},{o:0.406,h:0.412,l:0.402,c:0.404},{o:0.404,h:0.410,l:0.400,c:0.402},{o:0.402,h:0.408,l:0.396,c:0.398},{o:0.398,h:0.404,l:0.388,c:0.392},{o:0.392,h:0.396,l:0.378,c:0.382},{o:0.382,h:0.386,l:0.366,c:0.370},{o:0.370,h:0.374,l:0.352,c:0.356}],
+   ema50:[0.428,0.427,0.424,0.420,0.418,0.418,0.419,0.418,0.416,0.414,0.413,0.412,0.411,0.410,0.408,0.406,0.403,0.399,0.394,0.388],
+   ema200:[0.480,0.479,0.478,0.476,0.474,0.472,0.470,0.468,0.466,0.464,0.462,0.460,0.458,0.456,0.454,0.452,0.449,0.446,0.442,0.438],
+   draws:[{t:'tl2',p1:{i:1,s:'h'},p2:{i:13,s:'h'},color:K.dn,dash:[4,3],lbl:'lower highs'},{t:'tl2',p1:{i:3,s:'l'},p2:{i:14,s:'l'},color:K.tl,dash:[4,3],lbl:'higher lows'}]},
+ ]},
+{id:'reversal',num:'03',title:'Reversal Patterns',icon:'🔄',ibg:'rgba(255,87,87,0.1)',badge:'Intermediate',bcls:'br',
+ desc:'H&S, rising wedge at tops, cup & handle, falling wedge at bottoms. Patterns that signal trend change.',
+ meta:['3 quiz charts','4H · 1D','6 pattern types'],
+ intro:'Reversal patterns need context — they only work AGAINST the current trend. A rising wedge means nothing in the middle of a strong uptrend. The same wedge at the top of a long rally after RSI divergence = very high conviction short. Always check: are you at a structural extreme?',
+ concepts:[
+  {tag:'H&S',tc:'br',title:'Left → Head → Right shoulder',body:'Right shoulder makes lower high than head = buyer exhaustion. Neckline break = entry. RSI bearish divergence at right shoulder vs head = adds huge conviction.'},
+  {tag:'Rising wedge',tc:'br',title:'Converging up = bearish',body:'Both trendlines slope upward but converge. Buyers making less progress each push. At the top of a rally = high conviction short setup. Breakdown below lower trendline = entry.'},
+  {tag:'Cup & handle',tc:'bg',title:'Rounded bottom + small pullback',body:'Smooth U-shape (cup) + descending handle that retraces <50% of cup. Entry: breakout above cup rim. Most powerful on 4H/daily. Handle must not slice more than half the cup depth.'},
+  {tag:'Falling wedge',tc:'bg',title:'At bottom = reversal',body:'At the bottom of a downtrend = sellers exhausted. Both lines slope down and converge. Breakout above upper trendline + RSI bullish divergence = powerful reversal.'},
+  {tag:'Inv. cup',tc:'br',title:'Rounded top = distribution',body:'Inverted U-shape. Institutions selling into strength. The handle after the top is a bull trap — retail buys the bounce. Sell the breakdown below the cup rim.'},
+  {tag:'Rounded bottom',tc:'bg',title:'Saucer = most powerful',body:'Slow gradual U-curve over many candles. No panic, no V-reversal. Volume lowest at the bottom. Breakout above left rim on weekly = cycle-level buy signal.'},
+ ],
+ rules:[
+  {t:'Reversal patterns are most valid at structural extremes — not in the middle of a trend',g:true},
+  {t:'Always wait for neckline/trendline break — never enter inside the pattern',g:true},
+  {t:'RSI divergence at the reversal point = much higher conviction',g:true},
+  {t:'Rising wedge + RSI bearish divergence = one of the best short setups in crypto',g:true},
+  {t:'Cup handle must not retrace more than 50% of the cup depth',g:true},
+  {t:'Do not trade a rising wedge in the middle of a powerful uptrend with no divergence',g:false},
+  {t:'Do not trade H&S with a steeply sloped neckline — targets become unreliable',g:false},
+ ],
+ quizzes:[
+  {coin:'BNB/USDT',tf:'1D',hint:'Two peaks at similar price levels. Where is the neckline? When exactly do you enter the short?',dir:'bear',
+   pat:'Double top (M pattern) — bearish reversal',
+   ans:'Double top. Top 1 at candle 8, Top 2 at candle 16 (slightly lower = exhaustion). Neckline at the trough between them (~280). DO NOT short at Top 2. Entry: candle CLOSE below neckline. Best entry: retest of neckline from below (neckline flips to resistance). Target: height of M projected below neckline.',
+   candles:[{o:240,h:252,l:236,c:248},{o:248,h:264,l:244,c:260},{o:260,h:278,l:256,c:274},{o:274,h:290,l:270,c:286},{o:286,h:302,l:282,c:298},{o:298,h:312,l:294,c:308},{o:308,h:318,l:302,c:312},{o:312,h:320,l:306,c:316},{o:316,h:322,l:308,c:312},{o:312,h:316,l:296,c:300},{o:300,h:306,l:282,c:286},{o:286,h:294,l:272,c:280},{o:280,h:294,l:276,c:290},{o:290,h:306,l:286,c:302},{o:302,h:316,l:298,c:312},{o:312,h:322,l:306,c:318},{o:318,h:324,l:310,c:314},{o:314,h:318,l:298,c:302},{o:302,h:308,l:282,c:286},{o:286,h:292,l:262,c:266}],
+   ema50:[230,232,236,240,246,253,260,267,273,278,280,280,280,281,283,286,290,292,291,285],
+   ema200:[200,201,203,206,210,215,220,226,231,236,240,243,246,249,252,256,260,263,265,265],
+   draws:[{t:'hline',y:321,color:K.dn,dash:[4,3],lbl:'top resistance'},{t:'hline',y:280,color:K.nl,dash:[5,3],lbl:'neckline — short on close below'},{t:'mark',i:8,lbl:'Top 1',color:K.dn},{t:'mark',i:16,lbl:'Top 2',color:K.dn}]},
+  {coin:'AVAX/USDT',tf:'4H',hint:'Price is falling. But look at the two trendlines — are they getting further apart or closer together?',dir:'bull',
+   pat:'Falling wedge at bottom — bullish reversal',
+   ans:'Falling wedge at the bottom of a downtrend. Both trendlines slope down AND converge = sellers losing energy each candle. Each lower low is a smaller move. Breakout above upper trendline (candle 14) = long entry. RSI would show bullish divergence here = double confirmation.',
+   candles:[{o:18.0,h:18.8,l:17.2,c:17.6},{o:17.6,h:18.0,l:16.4,c:16.8},{o:16.8,h:17.2,l:15.6,c:16.0},{o:16.0,h:16.6,l:15.0,c:15.4},{o:15.4,h:16.0,l:14.4,c:14.8},{o:14.8,h:15.4,l:14.0,c:14.4},{o:14.4,h:15.0,l:13.6,c:14.0},{o:14.0,h:14.6,l:13.2,c:13.6},{o:13.6,h:14.2,l:12.8,c:13.2},{o:13.2,h:13.8,l:12.6,c:13.0},{o:13.0,h:13.6,l:12.4,c:12.8},{o:12.8,h:13.4,l:12.2,c:12.6},{o:12.6,h:13.2,l:12.2,c:12.8},{o:12.8,h:13.4,l:12.4,c:13.2},{o:13.2,h:14.0,l:12.8,c:13.8},{o:13.8,h:15.0,l:13.4,c:14.8},{o:14.8,h:16.2,l:14.4,c:16.0},{o:16.0,h:17.6,l:15.6,c:17.4},{o:17.4,h:19.0,l:17.0,c:18.8},{o:18.8,h:20.4,l:18.4,c:20.2}],
+   ema50:[18.4,18.0,17.6,17.1,16.6,16.2,15.8,15.4,15.0,14.7,14.4,14.2,14.0,13.9,13.9,14.1,14.5,15.1,16.0,17.1],
+   ema200:[21.0,20.8,20.6,20.3,20.0,19.7,19.4,19.1,18.8,18.5,18.2,17.9,17.7,17.5,17.3,17.2,17.2,17.3,17.5,17.9],
+   draws:[{t:'tl2',p1:{i:0,s:'h'},p2:{i:11,s:'h'},color:K.wedge,dash:[4,3],lbl:'falling resistance'},{t:'tl2',p1:{i:1,s:'l'},p2:{i:12,s:'l'},color:K.tl,dash:[4,3],lbl:'falling support'},{t:'mark',i:14,lbl:'Breakout ↑',color:K.up}]},
+  {coin:'BTC/USDT',tf:'1D',hint:'Look at the big rounded shape. What does the overall structure from candle 1 to 19 look like? Then there is a small pullback.',dir:'bull',
+   pat:'Cup & handle — bullish continuation',
+   ans:'Cup & handle. The cup = smooth U-shape candles 1-14 (rounded bottom). The handle = controlled pullback candles 15-19 (less than 50% of cup depth). Entry: breakout above cup rim (~43,600). Stop: below handle low. Target: cup depth projected above rim. The 50 EMA held below throughout = strong trend context.',
+   candles:[{o:42000,h:43500,l:41200,c:42800},{o:42800,h:43200,l:40800,c:41400},{o:41400,h:41800,l:39500,c:40200},{o:40200,h:40800,l:38400,c:39000},{o:39000,h:39600,l:37200,c:38000},{o:38000,h:38800,l:36800,c:37400},{o:37400,h:37800,l:36200,c:37000},{o:37000,h:37600,l:36400,c:37200},{o:37200,h:38200,l:36800,c:38000},{o:38000,h:39200,l:37600,c:39000},{o:39000,h:40400,l:38600,c:40200},{o:40200,h:41600,l:39800,c:41400},{o:41400,h:42800,l:41000,c:42600},{o:42600,h:43800,l:42200,c:43600},{o:43600,h:44000,l:42200,c:42800},{o:42800,h:43400,l:41800,c:42200},{o:42200,h:42800,l:41400,c:41800},{o:41800,h:42400,l:41200,c:41600},{o:41600,h:42200,l:41000,c:41900},{o:41900,h:45000,l:41700,c:44800}],
+   ema50:[43000,42600,42000,41200,40400,39600,38900,38400,38200,38300,38700,39400,40300,41400,42200,42600,42700,42700,42800,43200],
+   ema200:[38000,38100,38200,38300,38400,38500,38600,38700,38800,38900,39000,39100,39200,39300,39400,39500,39600,39700,39800,39900],
+   draws:[{t:'hline',y:43600,color:K.nl,dash:[5,3],lbl:'cup rim — entry on breakout'},{t:'rect',x1:14,x2:18,color:'rgba(167,139,250,0.08)',lbl:'handle'}]},
+ ]},
+{id:'ema',num:'04',title:'EMA Strategy',icon:'〰️',ibg:'rgba(255,184,48,0.1)',badge:'Core',bcls:'ba',
+ desc:'Golden cross, death cross, EMA as dynamic support. HTF EMA defines which side of the market to trade.',
+ meta:['2 quiz charts','1D · 1W','50 & 200 EMA'],
+ intro:'Before looking at any pattern, check the EMA positions on the daily or weekly chart. If 50 EMA is above 200 EMA = golden cross = bullish regime — only trade longs, buy pullbacks. If 50 is below 200 = death cross = bearish regime — only trade shorts, sell rallies. The EMA cross defines which side of the market you are on for weeks or months.',
+ concepts:[
+  {tag:'Golden cross',tc:'bg',title:'50 EMA crosses above 200',body:'Regime shift to bullish. Start of a new uptrend. All pullbacks to 50 EMA are buy opportunities. Only look for long setups. This defined BTC\'s bull runs in 2020 and 2023.'},
+  {tag:'Death cross',tc:'br',title:'50 EMA crosses below 200',body:'Regime shift to bearish. Start of a downtrend. All rallies to 50 EMA are short opportunities. Only look for short setups. Do not trade long patterns in a death cross regime.'},
+  {tag:'Dynamic support',tc:'bb',title:'EMA as moving support',body:'In an uptrend, price bouncing off the 20 or 50 EMA is an entry. The EMA moves with price — it is not a static level. The further above the 200 EMA the 50 EMA is, the stronger the trend.'},
+  {tag:'High TF rule',tc:'ba',title:'Weekly EMA = regime for months',body:'A golden/death cross on the weekly chart is not a signal — it is a regime change. Do not fight it for weeks or months. Align all your 4H and 1D setups with the weekly EMA direction.'},
+ ],
+ rules:[
+  {t:'Check 50 EMA vs 200 EMA position on daily/weekly BEFORE any other analysis',g:true},
+  {t:'Golden cross regime: only long setups, buy pullbacks to 50 EMA',g:true},
+  {t:'Death cross regime: only short setups, sell rallies to 50 EMA',g:true},
+  {t:'After a golden cross: pullback to 50 EMA = best entry (stop below 200 EMA)',g:true},
+  {t:'Weekly EMA cross: do not fight it for at least 4-8 weeks',g:true},
+  {t:'Never trade a bullish reversal pattern when 50 EMA is below 200 EMA on higher TF',g:false},
+  {t:'EMA cross on 1m/5m/15m is meaningless — daily minimum for regime definition',g:false},
+ ],
+ quizzes:[
+  {coin:'LINK/USDT',tf:'1D',hint:'Watch the EMA 50 (blue) vs EMA 200 (red). When do they cross? What happens to price after the cross?',dir:'bull',
+   pat:'Golden cross — regime shift to bullish',
+   ans:'Golden cross at candle ~10 — 50 EMA crosses above 200 EMA. Regime shifts to bullish. Price then pulled back to the 50 EMA at candles 13-14 = the entry. Stop below 200 EMA. This is the post-golden-cross pullback setup. Every bounce off the 50 EMA in a golden cross regime is a buy until the regime changes.',
+   candles:[{o:5.80,h:6.10,l:5.60,c:5.90},{o:5.90,h:6.20,l:5.70,c:6.10},{o:6.10,h:6.50,l:5.90,c:6.40},{o:6.40,h:6.80,l:6.20,c:6.70},{o:6.70,h:7.10,l:6.50,c:7.00},{o:7.00,h:7.40,l:6.80,c:7.30},{o:7.30,h:7.70,l:7.10,c:7.60},{o:7.60,h:8.00,l:7.40,c:7.90},{o:7.90,h:8.30,l:7.70,c:8.20},{o:8.20,h:8.60,l:8.00,c:8.50},{o:8.50,h:8.90,l:8.30,c:8.80},{o:8.80,h:9.10,l:8.50,c:8.70},{o:8.70,h:8.90,l:8.20,c:8.40},{o:8.40,h:8.60,l:7.90,c:8.20},{o:8.20,h:8.60,l:8.00,c:8.50},{o:8.50,h:9.00,l:8.30,c:8.90},{o:8.90,h:9.40,l:8.70,c:9.30},{o:9.30,h:9.80,l:9.10,c:9.70},{o:9.70,h:10.20,l:9.50,c:10.10},{o:10.10,h:10.60,l:9.90,c:10.50}],
+   ema50:[5.40,5.46,5.55,5.66,5.80,5.96,6.14,6.34,6.56,6.80,7.04,7.24,7.40,7.50,7.58,7.68,7.82,8.00,8.24,8.54],
+   ema200:[6.80,6.78,6.75,6.71,6.67,6.63,6.59,6.56,6.54,6.52,6.52,6.52,6.52,6.52,6.52,6.54,6.56,6.60,6.66,6.74],
+   draws:[{t:'mark',i:10,lbl:'Golden X',color:K.up},{t:'mark',i:13,lbl:'Entry zone',color:K.nl}]},
+  {coin:'MATIC/USDT',tf:'1D',hint:'When does the 50 EMA cross below the 200 EMA? What does each rally back to 50 EMA represent?',dir:'bear',
+   pat:'Death cross — regime shift to bearish',
+   ans:'Death cross at candle ~10 — 50 EMA crosses below 200 EMA. Regime shifts to bearish. Each rally back to the 50 EMA is a short entry. Price bounced to 50 EMA at candles 13-14 = the short entry. Stop above 200 EMA. Every rally to 50 EMA in a death cross regime is a sell until the regime changes.',
+   candles:[{o:1.42,h:1.52,l:1.38,c:1.48},{o:1.48,h:1.55,l:1.40,c:1.44},{o:1.44,h:1.50,l:1.34,c:1.38},{o:1.38,h:1.44,l:1.28,c:1.32},{o:1.32,h:1.38,l:1.22,c:1.26},{o:1.26,h:1.32,l:1.18,c:1.22},{o:1.22,h:1.28,l:1.14,c:1.18},{o:1.18,h:1.24,l:1.10,c:1.14},{o:1.14,h:1.20,l:1.06,c:1.10},{o:1.10,h:1.16,l:1.02,c:1.06},{o:1.06,h:1.12,l:0.98,c:1.02},{o:1.02,h:1.12,l:0.98,c:1.08},{o:1.08,h:1.20,l:1.04,c:1.16},{o:1.16,h:1.28,l:1.12,c:1.24},{o:1.24,h:1.34,l:1.20,c:1.28},{o:1.28,h:1.32,l:1.14,c:1.16},{o:1.16,h:1.20,l:1.02,c:1.06},{o:1.06,h:1.10,l:0.92,c:0.96},{o:0.96,h:1.00,l:0.82,c:0.86},{o:0.86,h:0.90,l:0.74,c:0.78}],
+   ema50:[1.60,1.58,1.56,1.53,1.50,1.46,1.42,1.38,1.34,1.30,1.26,1.24,1.23,1.23,1.24,1.24,1.22,1.19,1.14,1.08],
+   ema200:[1.30,1.31,1.31,1.32,1.32,1.32,1.32,1.31,1.30,1.29,1.28,1.27,1.27,1.27,1.27,1.27,1.27,1.26,1.24,1.22],
+   draws:[{t:'mark',i:10,lbl:'Death X',color:K.dn},{t:'mark',i:13,lbl:'Short entry',color:K.nl}]},
+ ]},
+{id:'wm',num:'05',title:'W & M Necklines',icon:'〽️',ibg:'rgba(167,139,250,0.1)',badge:'Critical',bcls:'bp',
+ desc:'Double bottom/top neckline mechanics, retest entries, timeframe reliability, and trap patterns to avoid.',
+ meta:['4 quiz charts','1H · 4H · 1D · 1W','entry · retest · traps'],
+ intro:'W and M patterns are the most traded reversal patterns. The single biggest mistake: buying at the second bottom of a W. That is not the entry. You wait for the neckline to break and then ideally retest. The neckline is your line in the sand — it flips from resistance to support (W) or support to resistance (M). Trade the flip, not the formation.',
+ concepts:[
+  {tag:'W neckline',tc:'bg',title:'Middle peak = neckline',body:'Draw horizontal line at the peak between the two bottoms. Entry: candle CLOSE above neckline. Best entry: retest of neckline from above. Stop: below bottom 2. Target: pattern height added above neckline.'},
+  {tag:'M neckline',tc:'br',title:'Middle trough = neckline',body:'Draw horizontal line at the trough between the two tops. Entry: candle CLOSE below neckline. Best entry: retest from below. Second top should be slightly lower than first = exhaustion.'},
+  {tag:'Retest entry',tc:'bb',title:'Neckline flips — best entry',body:'After neckline breaks, price often pulls back to test it from the new side. This retest is the highest-conviction entry: tighter stop, better R:R, neckline acting as the new support/resistance.'},
+  {tag:'Timeframes',tc:'ba',title:'Reliability by timeframe',body:'1m/5m: fail constantly, skip. 15m/1H: need volume + RSI confirmation. 4H: sweet spot, high reliability. Daily: major signal, pattern took weeks. Weekly: cycle-level signal (BTC 2018-2019 W).'},
+  {tag:'Trap',tc:'bp',title:'W in death cross = danger',body:'A W pattern when 50 EMA is below 200 EMA is usually a consolidation before the next leg down, not a reversal. The neckline may briefly break (fakeout) then fail. Only trade W longs in golden cross regime.'},
+ ],
+ rules:[
+  {t:'Draw neckline at the PEAK between two bottoms (W) or TROUGH between two tops (M)',g:true},
+  {t:'Entry: candle CLOSE beyond neckline — not a wick poke',g:true},
+  {t:'Best entry: wait for neckline retest from the new side',g:true},
+  {t:'Confirm with RSI divergence at the second bottom/top',g:true},
+  {t:'Volume should expand on the neckline breakout candle',g:true},
+  {t:'Target = height of W or M pattern projected from neckline',g:true},
+  {t:'Do NOT trade W long when 50 EMA is below 200 EMA (death cross)',g:false},
+  {t:'Do NOT trade if two bottoms/tops are at very different price levels',g:false},
+  {t:'Do NOT trade neckline break with no volume confirmation',g:false},
+  {t:'Do NOT trade W/M on 1m/5m — noise destroys the signal',g:false},
+ ],
+ quizzes:[
+  {coin:'BTC/USDT',tf:'4H',hint:'Two similar bottoms. Where is the neckline? When is the actual entry — bottom 2 or the neckline break?',dir:'bull',
+   pat:'W pattern — neckline break then retest entry',
+   ans:'W pattern. Bottom 1 at candle 4, Bottom 2 at candle 14. Neckline = swing high between them (~30,000). DO NOT buy at Bottom 2. Entry: candle CLOSE above neckline. BEST entry: retest of neckline from above at candle 17-18. Neckline flips from resistance to support. Stop: below Bottom 2. RSI higher low at Bottom 2 = bullish divergence confirmation.',
+   candles:[{o:28500,h:29200,l:28100,c:28800},{o:28800,h:29400,l:28200,c:28400},{o:28400,h:28800,l:27400,c:27800},{o:27800,h:28200,l:26800,c:27200},{o:27200,h:27800,l:26200,c:26800},{o:26800,h:27600,l:26400,c:27400},{o:27400,h:28400,l:27200,c:28200},{o:28200,h:29400,l:28000,c:29200},{o:29200,h:30200,l:29000,c:29800},{o:29800,h:30400,l:29400,c:30000},{o:30000,h:30400,l:29200,c:29600},{o:29600,h:30000,l:28800,c:29200},{o:29200,h:29600,l:28200,c:28600},{o:28600,h:29000,l:27800,c:28200},{o:28200,h:28800,l:26600,c:27200},{o:27200,h:28200,l:27000,c:28000},{o:28000,h:29400,l:27800,c:29200},{o:29200,h:30200,l:29000,c:29800},{o:29800,h:30200,l:29400,c:29600},{o:29600,h:32000,l:29400,c:31800}],
+   ema50:[28800,28700,28500,28200,27900,27700,27700,27900,28200,28500,28700,28700,28600,28400,28200,28100,28200,28600,29000,29700],
+   ema200:[26000,26100,26200,26300,26400,26500,26600,26700,26800,26900,27000,27100,27200,27300,27400,27500,27600,27700,27800,27900],
+   draws:[{t:'hline',y:30000,color:K.nl,dash:[5,3],lbl:'neckline — enter on close above'},{t:'mark',i:4,lbl:'Bottom 1',color:K.up},{t:'mark',i:14,lbl:'Bottom 2',color:K.up},{t:'mark',i:17,lbl:'Retest entry ★',color:K.nl}]},
+  {coin:'ETH/USDT',tf:'1D',hint:'Two similar tops. Where is the neckline? When should you actually enter the short?',dir:'bear',
+   pat:'M pattern — neckline break then retest entry',
+   ans:'M pattern. Top 1 at candle 5, Top 2 at candle 15 (slightly lower = exhaustion). Neckline at swing low between them (~1,840). DO NOT short at Top 2. Entry: candle CLOSE below neckline. Best entry: retest of neckline from below at candles 17-18. Stop: above Top 2. RSI lower high at Top 2 = bearish divergence confirmation.',
+   candles:[{o:1820,h:1880,l:1800,c:1860},{o:1860,h:1940,l:1840,c:1920},{o:1920,h:2000,l:1900,c:1980},{o:1980,h:2060,l:1960,c:2040},{o:2040,h:2120,l:2020,c:2090},{o:2090,h:2140,l:2060,c:2080},{o:2080,h:2100,l:1980,c:2000},{o:2000,h:2020,l:1880,c:1900},{o:1900,h:1940,l:1820,c:1860},{o:1860,h:1900,l:1800,c:1840},{o:1840,h:1900,l:1820,c:1880},{o:1880,h:1960,l:1860,c:1940},{o:1940,h:2020,l:1920,c:2000},{o:2000,h:2060,l:1980,c:2040},{o:2040,h:2100,l:2020,c:2070},{o:2070,h:2090,l:1960,c:1980},{o:1980,h:2000,l:1860,c:1880},{o:1880,h:1920,l:1800,c:1840},{o:1840,h:1880,l:1780,c:1800},{o:1800,h:1820,l:1640,c:1660}],
+   ema50:[1840,1870,1910,1960,2000,2030,2040,2030,2010,1990,1980,1980,1990,2010,2030,2040,2030,2010,1980,1940],
+   ema200:[1600,1610,1625,1642,1660,1678,1695,1710,1722,1732,1742,1752,1762,1772,1782,1790,1796,1800,1802,1802],
+   draws:[{t:'hline',y:1840,color:K.nl,dash:[5,3],lbl:'neckline — short on close below'},{t:'mark',i:5,lbl:'Top 1',color:K.dn},{t:'mark',i:15,lbl:'Top 2 (lower)',color:K.dn},{t:'mark',i:17,lbl:'Retest short ★',color:K.nl}]},
+  {coin:'ADA/USDT',tf:'4H',hint:'This looks like a W. But check the EMAs — is this the right context to trade it long?',dir:'warn',
+   pat:'W in downtrend — TRAP, do not trade',
+   ans:'TRAP. This looks like a textbook W but the 50 EMA is BELOW the 200 EMA (death cross). You are in a macro downtrend. This W is a consolidation before the next leg down. The neckline briefly broke (fakeout at candle 17) then reversed hard. Rule: never trade a W long when 50 is below 200. Wait for golden cross before trading bullish patterns.',
+   candles:[{o:0.38,h:0.40,l:0.35,c:0.37},{o:0.37,h:0.39,l:0.33,c:0.35},{o:0.35,h:0.37,l:0.31,c:0.33},{o:0.33,h:0.35,l:0.29,c:0.31},{o:0.31,h:0.33,l:0.27,c:0.29},{o:0.29,h:0.32,l:0.27,c:0.31},{o:0.31,h:0.34,l:0.29,c:0.33},{o:0.33,h:0.36,l:0.31,c:0.35},{o:0.35,h:0.38,l:0.33,c:0.37},{o:0.37,h:0.39,l:0.35,c:0.38},{o:0.38,h:0.40,l:0.36,c:0.37},{o:0.37,h:0.39,l:0.33,c:0.34},{o:0.34,h:0.36,l:0.29,c:0.30},{o:0.30,h:0.32,l:0.27,c:0.29},{o:0.29,h:0.31,l:0.26,c:0.28},{o:0.28,h:0.31,l:0.26,c:0.30},{o:0.30,h:0.33,l:0.28,c:0.32},{o:0.32,h:0.35,l:0.30,c:0.34},{o:0.34,h:0.36,l:0.29,c:0.30},{o:0.30,h:0.31,l:0.23,c:0.24}],
+   ema50:[0.388,0.382,0.374,0.365,0.355,0.346,0.340,0.337,0.337,0.338,0.339,0.337,0.333,0.327,0.321,0.317,0.316,0.318,0.315,0.307],
+   ema200:[0.420,0.418,0.415,0.411,0.406,0.401,0.396,0.392,0.389,0.386,0.384,0.381,0.378,0.374,0.370,0.366,0.363,0.361,0.358,0.353],
+   draws:[{t:'hline',y:0.38,color:K.nl,dash:[5,3],lbl:'neckline (fakeout)'},{t:'mark',i:4,lbl:'Bottom 1',color:'#888'},{t:'mark',i:14,lbl:'Bottom 2',color:'#888'},{t:'mark',i:17,lbl:'Fakeout ↓',color:K.dn}]},
+  {coin:'SOL/USDT',tf:'4H',hint:'The neckline already broke. Price pulled back to retest it. Is the retest holding? What is this moment called?',dir:'bull',
+   pat:'W pattern — retest of neckline (best entry moment)',
+   ans:'W retest entry. Neckline broke at candle 16. Price pulled back to retest it from above at candles 20-21. The neckline that was resistance has now flipped to support. This retest is the BEST entry — tighter stop (just below neckline), better R:R than buying the initial breakout candle. This is what professional traders wait for.',
+   candles:[{o:14.0,h:14.8,l:13.4,c:14.4},{o:14.4,h:15.0,l:13.6,c:13.8},{o:13.8,h:14.2,l:12.8,c:13.0},{o:13.0,h:13.6,l:12.2,c:12.6},{o:12.6,h:13.0,l:11.8,c:12.0},{o:12.0,h:12.8,l:11.6,c:12.4},{o:12.4,h:13.2,l:12.0,c:13.0},{o:13.0,h:14.0,l:12.8,c:13.8},{o:13.8,h:14.8,l:13.6,c:14.6},{o:14.6,h:15.4,l:14.4,c:15.2},{o:15.2,h:15.8,l:14.8,c:15.4},{o:15.4,h:15.8,l:14.4,c:14.8},{o:14.8,h:15.2,l:13.8,c:14.0},{o:14.0,h:14.4,l:13.0,c:13.4},{o:13.4,h:14.0,l:12.4,c:12.8},{o:12.8,h:13.8,l:12.6,c:13.6},{o:13.6,h:15.0,l:13.4,c:14.8},{o:14.8,h:16.0,l:14.6,c:15.8},{o:15.8,h:16.4,l:15.2,c:15.6},{o:15.6,h:15.8,l:14.8,c:15.2},{o:15.2,h:15.6,l:14.6,c:15.0},{o:15.0,h:15.4,l:14.6,c:15.2},{o:15.2,h:16.8,l:15.0,c:16.6},{o:16.6,h:18.4,l:16.4,c:18.2}],
+   ema50:[14.2,14.1,13.9,13.6,13.3,13.1,13.0,13.1,13.3,13.6,13.9,14.1,14.1,14.0,13.8,13.7,13.8,14.1,14.4,14.6,14.7,14.8,15.2,16.0],
+   ema200:[16.0,15.9,15.7,15.5,15.3,15.1,14.9,14.8,14.7,14.6,14.6,14.6,14.5,14.5,14.4,14.4,14.4,14.4,14.5,14.5,14.6,14.6,14.7,14.9],
+   draws:[{t:'hline',y:15.2,color:K.nl,dash:[5,3],lbl:'neckline (now support)'},{t:'mark',i:4,lbl:'Bottom 1',color:K.up},{t:'mark',i:14,lbl:'Bottom 2',color:K.up},{t:'mark',i:16,lbl:'Breakout',color:K.nl},{t:'mark',i:21,lbl:'Retest entry ★',color:K.up}]},
+ ]},
+{id:'advanced',num:'06',title:'Advanced Formations',icon:'🔭',ibg:'rgba(167,139,250,0.1)',badge:'Advanced',bcls:'bp',
+ desc:'Rounded bottoms, ascending broadening, rising wedge in downtrend, and combining multiple signals for conviction.',
+ meta:['3 quiz charts','1D · 1W','confluence signals'],
+ intro:'Advanced patterns are about combining multiple signals into one trade. A rounded bottom alone is good. A rounded bottom on the weekly + RSI bullish divergence + golden cross = exceptional. The more signals that align, the higher the conviction. Also includes the trap patterns — ascending broadening and rising wedge in downtrend — which fool beginners into buying tops.',
+ concepts:[
+  {tag:'Rounded bottom',tc:'bg',title:'Saucer = strongest reversal',body:'Slow gradual U-curve — no panic, no sharp V. Volume lowest at the very bottom, gradually increases as price rounds up. On the weekly = cycle buy signal. Entry only on breakout above left rim level. Do not buy inside the curve.'},
+  {tag:'Asc. broadening',tc:'br',title:'Widening trendlines = danger',body:'Higher highs AND higher lows but trendlines DIVERGE (widen). Each swing is bigger. At a major top = institutions distributing into retail excitement. Do not buy upside breakouts — they are traps. Wait for close below lower trendline.'},
+  {tag:'Rising wedge (down)',tc:'br',title:'Wedge in downtrend = bear',body:'Price bounces in a rising wedge during a downtrend (death cross). This is a corrective bounce, not a reversal. Short the breakdown of the lower wedge line. Trend context turns a normally ambiguous pattern into a clear short.'},
+  {tag:'Confluence',tc:'ba',title:'3+ signals = high conviction',body:'W neckline break + RSI divergence + EMA support + volume = very high conviction. Each alone is noise. Three together is the trade. Always ask: how many things are lining up at this level?'},
+ ],
+ rules:[
+  {t:'Rounded bottom: entry only on breakout above left rim — never buy inside the curve',g:true},
+  {t:'Ascending broadening: wait for close below lower trendline to short',g:true},
+  {t:'Require 3+ confluence signals for highest conviction trades',g:true},
+  {t:'Rising wedge in death cross = short the break, not a reversal buy',g:true},
+  {t:'Weekly rounded bottom breakout = one of the most powerful setups in all of crypto',g:true},
+  {t:'Do not trade inside a broadening formation — wait for confirmed break with volume',g:false},
+  {t:'Do not buy ascending broadening upper trendline breaks — usually bull traps',g:false},
+ ],
+ quizzes:[
+  {coin:'SOL/USDT',tf:'1W',hint:'This is a weekly chart. Look at the slow gradual shape of price over many weeks. What structure is forming?',dir:'bull',
+   pat:'Rounded bottom (saucer) — weekly cycle buy signal',
+   ans:'Rounded bottom on the weekly. The slow, gradual U-curve is the key — no panic lows, no V-reversal. This means smart money accumulated quietly over months. Volume was lowest at the bottom. Breakout above the left rim level (~22) is the entry. Weekly saucer = one of the most powerful setups in crypto. Stop: weekly close below the right side of the curve.',
+   candles:[{o:22,h:24,l:20,c:22},{o:22,h:23,l:18,c:19},{o:19,h:20,l:16,c:17},{o:17,h:18,l:14,c:15},{o:15,h:16,l:13,c:14},{o:14,h:15,l:12,c:13},{o:13,h:14,l:11,c:12},{o:12,h:13,l:11,c:12},{o:12,h:13,l:11,c:12},{o:12,h:13,l:11,c:12},{o:12,h:13,l:11,c:13},{o:13,h:14,l:12,c:14},{o:14,h:15,l:13,c:15},{o:15,h:17,l:14,c:16},{o:16,h:18,l:15,c:17},{o:17,h:19,l:16,c:18},{o:18,h:20,l:17,c:19},{o:19,h:21,l:18,c:20},{o:20,h:22,l:19,c:21},{o:21,h:23,l:20,c:22},{o:22,h:25,l:21,c:24},{o:24,h:28,l:23,c:27}],
+   ema50:[22,21,20,19,18,17,16,15,14,13,13,13,13,14,14,15,16,17,18,19,20,22],
+   ema200:[28,27,26,25,24,23,22,21,20,19,18,17,17,16,16,16,16,16,16,17,18,19],
+   draws:[{t:'hline',y:22,color:K.nl,dash:[5,3],lbl:'rim level — breakout entry'}]},
+  {coin:'XRP/USDT',tf:'4H',hint:'Price is making higher highs and higher lows. But what is happening to the distance between the two trendlines?',dir:'bear',
+   pat:'Ascending broadening — bearish distribution at top',
+   ans:'Ascending broadening formation. Both trendlines slope upward AND diverge = volatility expanding. Bigger swings each time = chaos. At the top of a trend this is institutions distributing into retail excitement. Upside breakouts above the upper line are TRAPS — do not buy them. Wait for a close below the lower trendline (candle 12). Target: back to the base of formation.',
+   candles:[{o:0.52,h:0.56,l:0.50,c:0.54},{o:0.54,h:0.60,l:0.50,c:0.52},{o:0.52,h:0.58,l:0.48,c:0.56},{o:0.56,h:0.64,l:0.50,c:0.54},{o:0.54,h:0.62,l:0.46,c:0.60},{o:0.60,h:0.70,l:0.52,c:0.56},{o:0.56,h:0.66,l:0.44,c:0.64},{o:0.64,h:0.76,l:0.54,c:0.58},{o:0.58,h:0.70,l:0.42,c:0.68},{o:0.68,h:0.82,l:0.56,c:0.60},{o:0.60,h:0.74,l:0.40,c:0.72},{o:0.72,h:0.88,l:0.58,c:0.62},{o:0.62,h:0.78,l:0.38,c:0.42},{o:0.42,h:0.52,l:0.32,c:0.34},{o:0.34,h:0.42,l:0.26,c:0.28},{o:0.28,h:0.34,l:0.20,c:0.22}],
+   ema50:[0.52,0.52,0.53,0.54,0.55,0.56,0.57,0.58,0.59,0.60,0.61,0.62,0.61,0.58,0.54,0.48],
+   ema200:[0.46,0.46,0.47,0.47,0.48,0.48,0.49,0.50,0.51,0.52,0.53,0.54,0.54,0.53,0.52,0.50],
+   draws:[{t:'tl2',p1:{i:0,s:'h'},p2:{i:11,s:'h'},color:K.dn,dash:[4,3],lbl:'widening highs'},{t:'tl2',p1:{i:1,s:'l'},p2:{i:11,s:'l'},color:K.tl,dash:[4,3],lbl:'widening lows'},{t:'mark',i:12,lbl:'Breakdown',color:K.dn}]},
+  {coin:'LINK/USDT',tf:'1D',hint:'EMA 50 is below EMA 200. Price is bouncing in what pattern? How does trend context change your interpretation?',dir:'bear',
+   pat:'Rising wedge in downtrend — bearish continuation (not reversal)',
+   ans:'Rising wedge during a downtrend (death cross — 50 below 200 EMA). Price bounced but formed a rising wedge = this is a corrective bounce, not a reversal. The death cross tells you the trend is bearish. This wedge is distribution. Short the breakdown of the lower wedge trendline (candle 12). Same pattern in an uptrend = reversal. In a downtrend = continuation. Trend context changes everything.',
+   candles:[{o:5.8,h:5.9,l:5.0,c:5.2},{o:5.2,h:5.4,l:4.8,c:5.3},{o:5.3,h:5.8,l:5.1,c:5.7},{o:5.7,h:6.2,l:5.5,c:6.1},{o:6.1,h:6.6,l:5.9,c:6.5},{o:6.5,h:6.9,l:6.3,c:6.8},{o:6.8,h:7.2,l:6.6,c:7.1},{o:7.1,h:7.4,l:6.9,c:7.3},{o:7.3,h:7.6,l:7.1,c:7.5},{o:7.5,h:7.7,l:7.3,c:7.6},{o:7.6,h:7.8,l:7.4,c:7.7},{o:7.7,h:7.9,l:7.5,c:7.7},{o:7.7,h:7.8,l:7.4,c:7.5},{o:7.5,h:7.6,l:7.1,c:7.2},{o:7.2,h:7.3,l:6.6,c:6.7},{o:6.7,h:6.8,l:6.0,c:6.1},{o:6.1,h:6.2,l:5.4,c:5.5},{o:5.5,h:5.6,l:4.8,c:4.9},{o:4.9,h:5.0,l:4.2,c:4.3},{o:4.3,h:4.4,l:3.6,c:3.7}],
+   ema50:[6.2,6.1,6.0,6.0,6.1,6.2,6.4,6.6,6.8,7.0,7.1,7.2,7.2,7.2,7.1,6.9,6.6,6.2,5.7,5.2],
+   ema200:[8.5,8.4,8.3,8.2,8.1,8.0,7.9,7.8,7.7,7.6,7.5,7.4,7.3,7.2,7.1,7.0,6.8,6.6,6.4,6.1],
+   draws:[{t:'tl2',p1:{i:1,s:'l'},p2:{i:11,s:'l'},color:K.tl,dash:[4,3],lbl:'rising support'},{t:'tl2',p1:{i:2,s:'h'},p2:{i:11,s:'h'},color:K.wedge,dash:[4,3],lbl:'rising resistance'},{t:'mark',i:12,lbl:'Break ↓',color:K.dn}]},
+ ]},
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+const SK='ta_v1';
+let S=loadS();
+function loadS(){try{return JSON.parse(localStorage.getItem(SK))||{};}catch{return{};}}
+function saveS(){localStorage.setItem(SK,JSON.stringify(S));}
+function getMS(id){return S[id]||{done:false,solved:[]};}
+function markDone(id){if(!S[id])S[id]={done:false,solved:[]};S[id].done=true;saveS();renderProg();renderMods();}
+function markSolved(mid,idx){if(!S[mid])S[mid]={done:false,solved:[]};if(!S[mid].solved.includes(idx))S[mid].solved.push(idx);saveS();}
+function isSolved(mid,idx){return(S[mid]?.solved||[]).includes(idx);}
+function resetProgress(){if(confirm('Reset all progress?')){localStorage.removeItem(SK);S={};renderAll();}}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderAll(){renderProg();renderMods();}
+
+function renderProg(){
+  const g=document.getElementById('progGrid');
+  let html='',tQ=0,sQ=0;
+  MODULES.forEach(m=>{
+    const ms=getMS(m.id);
+    const qc=m.quizzes.length,qs=(ms.solved||[]).length;
+    tQ+=qc;sQ+=qs;
+    const pct=qc>0?Math.round(qs/qc*100):(ms.done?100:0);
+    const col=pct===100?'#00d68f':pct>0?'#4da6ff':'#1e2330';
+    html+=`<div class="prog-item"><div class="prog-label">${m.num} ${m.title}</div><div class="prog-bar-w"><div class="prog-bar-f" style="width:${pct}%;background:${col};"></div></div><div class="prog-count">${qs}/${qc} quiz · ${ms.done?'✓ read':'unread'}</div></div>`;
+  });
+  g.innerHTML=html;
+  const gp=tQ>0?Math.round(sQ/tQ*100):0;
+  document.getElementById('globalProg').style.width=gp+'%';
+}
+
+function renderMods(){
+  document.getElementById('moduleGrid').innerHTML=MODULES.map(m=>{
+    const ms=getMS(m.id);
+    return `<div class="mcard ${ms.done?'done':''}" onclick="toggleLesson('${m.id}')">
+      <div class="mcard-top"><div class="mcard-icon" style="background:${m.ibg};">${m.icon}</div><div class="mcard-chk ${ms.done?'done':''}">${ms.done?'✓':''}</div></div>
+      <div class="mcard-title">${m.num} ${m.title}</div>
+      <div class="mcard-desc">${m.desc}</div>
+      <div class="mcard-meta">${m.meta.map(x=>`<span class="mmeta">· ${x}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+let openL=null;
+const QS={};
+
+function toggleLesson(id){
+  const cont=document.getElementById('lessonContainer');
+  if(openL===id){document.getElementById('L-'+id)?.remove();openL=null;return;}
+  if(openL){document.getElementById('L-'+openL)?.remove();}
+  openL=id;
+  const m=MODULES.find(x=>x.id===id);
+  const el=document.createElement('div');
+  el.id='L-'+id;el.className='lesson-panel open';
+  el.innerHTML=buildLesson(m);
+  cont.appendChild(el);
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>initQ(m),80);
+}
+
+function buildLesson(m){
+  const ms=getMS(m.id);
+  return `<div class="lesson-nav">
+    <div class="lesson-nav-title">${m.icon} ${m.title}</div>
+    <button class="lnb active" onclick="swTab('${m.id}','c')">Concepts</button>
+    <button class="lnb" onclick="swTab('${m.id}','r')">Rules</button>
+    <button class="lnb" onclick="swTab('${m.id}','q')">Quiz (${m.quizzes.length})</button>
+  </div>
+  <div class="lesson-body">
+    <div class="tab-content active" id="t-${m.id}-c">
+      <div class="intro-box">${m.intro}</div>
+      <div class="con-grid">${m.concepts.map(c=>`<div class="ccard"><span class="ctag ${c.tc}">${c.tag}</span><div class="ctitle">${c.title}</div><div class="cbody">${c.body}</div></div>`).join('')}</div>
+      <button class="mark-done ${ms.done?'done':''}" onclick="markDone('${m.id}');this.textContent='✓ Marked as read';this.classList.add('done');">${ms.done?'✓ Marked as read':'Mark as read'}</button>
+    </div>
+    <div class="tab-content" id="t-${m.id}-r">
+      <div class="rules-box"><div class="rules-title" style="color:var(--green)">✓ Do this</div>${m.rules.filter(r=>r.g).map(r=>`<div class="rule g">${r.t}</div>`).join('')}</div>
+      <div class="rules-box"><div class="rules-title" style="color:var(--red)">✗ Avoid this</div>${m.rules.filter(r=>!r.g).map(r=>`<div class="rule b">${r.t}</div>`).join('')}</div>
+    </div>
+    <div class="tab-content" id="t-${m.id}-q">
+      <div class="quiz-nav" id="qn-${m.id}"></div>
+      <div id="qa-${m.id}"></div>
+    </div>
+  </div>`;
+}
+
+function swTab(id,t){
+  ['c','r','q'].forEach(x=>{
+    const el=document.getElementById(`t-${id}-${x}`);
+    if(el)el.classList.toggle('active',x===t);
+  });
+  document.getElementById('L-'+id)?.querySelectorAll('.lnb').forEach((b,i)=>b.classList.toggle('active',['c','r','q'][i]===t));
+}
+
+function initQ(m){
+  if(!QS[m.id])QS[m.id]={cur:0};
+  buildQNav(m);renderQ(m,0);
+}
+
+function buildQNav(m){
+  const nav=document.getElementById('qn-'+m.id);if(!nav)return;
+  const solved=(S[m.id]?.solved||[]).length;
+  nav.innerHTML=m.quizzes.map((q,i)=>{
+    const s=isSolved(m.id,i),a=QS[m.id]?.cur===i;
+    return `<button class="qnum ${a?'active':''} ${s?'solved':''}" onclick="selQ('${m.id}',${i})">${i+1}</button>`;
+  }).join('')+`<span class="qsolve-ct">${solved}/${m.quizzes.length} solved</span>`;
+}
+
+function selQ(mid,idx){QS[mid]={cur:idx};const m=MODULES.find(x=>x.id===mid);buildQNav(m);renderQ(m,idx);}
+
+function renderQ(m,idx){
+  const area=document.getElementById('qa-'+m.id);if(!area)return;
+  const q=m.quizzes[idx],solved=isSolved(m.id,idx);
+  const isRSI=m.id==='rsi';
+  area.innerHTML=`<div class="qcard">
+    <div class="qcard-hdr"><span class="qcoin">${q.coin}</span><span class="qtf">${q.tf}</span></div>
+    <div class="qhint">${q.hint}</div>
+    <div class="qleg-row">
+      ${q.ema50?'<span class="qleg"><span class="qleg-dot" style="background:#4da6ff;"></span>EMA 50</span>':''}
+      ${q.ema200?'<span class="qleg"><span class="qleg-dot" style="background:rgba(255,87,87,0.65);"></span>EMA 200</span>':''}
+      <span class="qleg"><span class="qleg-dot" style="background:#a78bfa;"></span>Trendline</span>
+      <span class="qleg"><span class="qleg-dot" style="background:#ffb830;"></span>Key level</span>
+    </div>
+    <canvas id="pc-${m.id}-${idx}" height="230" style="width:100%;display:block;"></canvas>
+    ${isRSI?`<div style="font-size:10px;color:var(--text3);padding:3px 13px;border-top:1px solid var(--border);font-family:var(--fm);">RSI (14)</div><canvas id="rc-${m.id}-${idx}" height="90" style="width:100%;display:block;"></canvas>`:''}
+    <div class="reveal-zone">
+      <button class="rev-btn" onclick="revQ('${m.id}',${idx})">Reveal answer</button>
+      <div class="ans-box ${q.dir}" id="ab-${m.id}-${idx}" style="${solved?'display:block':'display:none'}"><strong>${q.pat}</strong><br><br>${q.ans}</div>
+    </div>
+  </div>`;
+  setTimeout(()=>{drawC(m.id,idx,q);if(isRSI&&q.rsi)drawRSI(m.id,idx,q);},60);
+}
+
+function revQ(mid,idx){
+  document.getElementById(`ab-${mid}-${idx}`).style.display='block';
+  markSolved(mid,idx);buildQNav(MODULES.find(x=>x.id===mid));renderProg();
+}
+
+// ── CANVAS ───────────────────────────────────────────────────────────────────
+function drawC(mid,idx,q){
+  const cv=document.getElementById(`pc-${mid}-${idx}`);if(!cv)return;
+  const W=cv.parentElement.offsetWidth||640;
+  cv.width=W*DR;cv.height=230*DR;cv.style.width=W+'px';cv.style.height='230px';
+  const ctx=cv.getContext('2d');ctx.scale(DR,DR);
+  const H=230,pad={l:52,r:12,t:12,b:18};
+  const w=W-pad.l-pad.r,h=H-pad.t-pad.b,n=q.candles.length;
+  const allV=q.candles.flatMap(c=>[c.h,c.l]);
+  const allE=[...(q.ema50||[]),...(q.ema200||[])];
+  const minP=Math.min(...allV,...(allE.length?allE:[1e9]))*0.994;
+  const maxP=Math.max(...allV,...(allE.length?allE:[-1e9]))*1.005;
+  const rng=maxP-minP;
+  const yP=v=>pad.t+h-((v-minP)/rng)*h;
+  const cw=w/n,bw=Math.max(cw*0.58,2);
+  const cx=i=>pad.l+i*cw+cw/2;
+
+  for(let i=0;i<=4;i++){
+    const yy=pad.t+(i/4)*h;
+    ctx.beginPath();ctx.strokeStyle=K.gr;ctx.lineWidth=0.5;
+    ctx.moveTo(pad.l,yy);ctx.lineTo(W-pad.r,yy);ctx.stroke();
+    const v=maxP-(i/4)*rng;
+    ctx.fillStyle=K.ax;ctx.font='10px monospace';ctx.textAlign='right';
+    const d=v>1000?Math.round(v).toLocaleString():v>10?v.toFixed(1):v.toFixed(3);
+    ctx.fillText(d,pad.l-3,yy+3);
+  }
+
+  const ema=(arr,col,dash)=>{
+    if(!arr?.length)return;
+    ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.setLineDash(dash?[4,3]:[]);
+    arr.forEach((v,i)=>i===0?ctx.moveTo(cx(i),yP(v)):ctx.lineTo(cx(i),yP(v)));
+    ctx.stroke();ctx.setLineDash([]);
+  };
+  ema(q.ema200,K.e200,true);ema(q.ema50,K.e50,false);
+
+  q.candles.forEach((c,i)=>{
+    const x=cx(i),up=c.c>=c.o;
+    ctx.beginPath();ctx.strokeStyle=K.wk;ctx.lineWidth=1;
+    ctx.moveTo(x,yP(c.h));ctx.lineTo(x,yP(c.l));ctx.stroke();
+    const bt=yP(Math.max(c.o,c.c)),bb=yP(Math.min(c.o,c.c));
+    ctx.fillStyle=up?K.up:K.dn;ctx.fillRect(x-bw/2,bt,bw,Math.max(bb-bt,1));
+  });
+
+  if(q.draws)q.draws.forEach(d=>{
+    if(d.t==='hline'){
+      ctx.beginPath();ctx.strokeStyle=d.color;ctx.lineWidth=1.4;ctx.setLineDash(d.dash||[]);
+      ctx.moveTo(pad.l,yP(d.y));ctx.lineTo(W-pad.r,yP(d.y));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=d.color;ctx.font='10px monospace';ctx.textAlign='right';
+      ctx.fillText(d.lbl,W-pad.r-2,yP(d.y)-4);
+    }
+    if(d.t==='tl2'){
+      const c1=q.candles[d.p1.i],c2=q.candles[d.p2.i];
+      const y1=d.p1.s==='h'?c1.h:c1.l,y2=d.p2.s==='h'?c2.h:c2.l;
+      ctx.beginPath();ctx.strokeStyle=d.color;ctx.lineWidth=1.4;ctx.setLineDash(d.dash||[]);
+      ctx.moveTo(cx(d.p1.i),yP(y1));ctx.lineTo(cx(d.p2.i),yP(y2));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=d.color;ctx.font='10px monospace';ctx.textAlign='center';
+      ctx.fillText(d.lbl,cx(d.p2.i),yP(y2)+(d.p2.s==='h'?-8:14));
+    }
+    if(d.t==='mark'){
+      const mc=q.candles[d.i],x=cx(d.i);
+      ctx.beginPath();ctx.arc(x,yP(mc.h)-10,4,0,Math.PI*2);ctx.fillStyle=d.color;ctx.fill();
+      ctx.fillStyle=d.color;ctx.font='500 10px monospace';ctx.textAlign='center';
+      ctx.fillText(d.lbl,x,yP(mc.h)-22);
+    }
+    if(d.t==='rect'){
+      ctx.fillStyle=d.color;ctx.fillRect(pad.l+d.x1*cw,pad.t,(d.x2-d.x1+1)*cw,h);
+      ctx.fillStyle='rgba(167,139,250,0.5)';ctx.font='10px monospace';ctx.textAlign='center';
+      ctx.fillText(d.lbl,pad.l+(d.x1+(d.x2-d.x1)/2)*cw+cw/2,pad.t+14);
+    }
+  });
+
+  if(q.swA!==undefined){
+    [[q.swA,'A'],[q.swB,'B']].forEach(([ki,lbl])=>{
+      const mc=q.candles[ki],x=cx(ki);
+      const yv=q.swT==='low'?mc.l:mc.h;
+      ctx.beginPath();ctx.arc(x,yP(yv),5,0,Math.PI*2);ctx.fillStyle=K.div;ctx.fill();
+      ctx.fillStyle=K.div;ctx.font='500 11px monospace';ctx.textAlign='center';
+      ctx.fillText(lbl,x,yP(yv)+(q.swT==='low'?16:-12));
+    });
+    const pA={x:cx(q.swA),y:yP(q.swT==='low'?q.candles[q.swA].l:q.candles[q.swA].h)};
+    const pB={x:cx(q.swB),y:yP(q.swT==='low'?q.candles[q.swB].l:q.candles[q.swB].h)};
+    ctx.beginPath();ctx.strokeStyle=K.div;ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+    ctx.moveTo(pA.x,pA.y);ctx.lineTo(pB.x,pB.y);ctx.stroke();ctx.setLineDash([]);
+  }
+}
+
+function drawRSI(mid,idx,q){
+  const cv=document.getElementById(`rc-${mid}-${idx}`);if(!cv||!q.rsi)return;
+  const W=cv.parentElement.offsetWidth||640;
+  cv.width=W*DR;cv.height=90*DR;cv.style.width=W+'px';cv.style.height='90px';
+  const ctx=cv.getContext('2d');ctx.scale(DR,DR);
+  const H=90,pad={l:52,r:12,t:6,b:14};
+  const w=W-pad.l-pad.r,h=H-pad.t-pad.b,n=q.rsi.length;
+  const x=i=>pad.l+(i/(n-1))*w;
+  const y=v=>pad.t+h-((v/100)*h);
+
+  ctx.fillStyle='rgba(255,87,87,0.05)';ctx.fillRect(pad.l,pad.t,w,h*0.3);
+  ctx.fillStyle='rgba(0,214,143,0.05)';ctx.fillRect(pad.l,pad.t+h*0.7,w,h*0.3);
+  [30,50,70].forEach(v=>{
+    const yy=y(v);
+    ctx.beginPath();ctx.strokeStyle=K.gr;ctx.lineWidth=0.5;ctx.moveTo(pad.l,yy);ctx.lineTo(W-pad.r,yy);ctx.stroke();
+    ctx.fillStyle=K.ax;ctx.font='10px monospace';ctx.textAlign='right';ctx.fillText(v,pad.l-3,yy+3);
+  });
+  ctx.beginPath();ctx.strokeStyle=K.e50;ctx.lineWidth=1.4;
+  q.rsi.forEach((v,i)=>i===0?ctx.moveTo(x(i),y(v)):ctx.lineTo(x(i),y(v)));
+  ctx.stroke();
+
+  if(q.swA!==undefined){
+    const pA={x:x(q.swA),y:y(q.rsi[q.swA])},pB={x:x(q.swB),y:y(q.rsi[q.swB])};
+    ctx.beginPath();ctx.strokeStyle=K.div;ctx.lineWidth=2;ctx.setLineDash([5,3]);
+    ctx.moveTo(pA.x,pA.y);ctx.lineTo(pB.x,pB.y);ctx.stroke();ctx.setLineDash([]);
+    [[pA,'A',q.rsi[q.swA]],[pB,'B',q.rsi[q.swB]]].forEach(([p,l,rv])=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle=K.div;ctx.fill();
+      ctx.fillStyle=K.div;ctx.font='500 10px monospace';ctx.textAlign='center';
+      ctx.fillText(`${l}:${Math.round(rv)}`,p.x,p.y+13);
+    });
+  }
+}
+
+renderAll();
+</script>
+</body>
+</html>
